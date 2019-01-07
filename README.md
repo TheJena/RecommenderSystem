@@ -15,6 +15,14 @@ The project is composed of several scripts to:
 * merge the recommendations of the two approaches into a single list
   of item to recommend
 
+How to create MongoDB dump
+=========================
+
+Please take a look
+[here](https://github.com/TheJena/RecommenderSystem/raw/master/docs/how_to_create_test_db_dump.pdf)
+if you re interested in how the huge size of the "Amazon reviews"
+dataset from [SNAP](https://snap.stanford.edu) has been reduced.
+
 License
 =======
 
