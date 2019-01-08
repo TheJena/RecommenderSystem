@@ -1,0 +1,459 @@
+Table of categories with at least 1 items:
++-------------------------------------------+------------+
+| category                                  |   n° items |
+|-------------------------------------------+------------|
+| Books                                     |      67000 |
+| Video Games                               |      40000 |
+| Games                                     |      27296 |
+| PC                                        |      13331 |
+| More Systems                              |      12472 |
+| Kids & Family                             |      10299 |
+| Accessories                               |       8772 |
+| Nintendo DS                               |       3486 |
+| Wii                                       |       3389 |
+| PlayStation 2                             |       3108 |
+| Xbox 360                                  |       3070 |
+| PlayStation 3                             |       2505 |
+| Hardware                                  |       2440 |
+| Digital Games                             |       1925 |
+| PC Game Downloads                         |       1878 |
+| Sony PSP                                  |       1689 |
+| PlayStation                               |       1591 |
+| Controllers                               |       1511 |
+| Xbox                                      |       1426 |
+| Casual Games                              |       1367 |
+| Mac                                       |       1337 |
+| Game Boy Advance                          |       1308 |
+| Software                                  |       1075 |
+| Cases & Protectors                        |       1067 |
+| GameCube                                  |        974 |
+| Accessory Kits                            |        816 |
+| Skins                                     |        806 |
+| Children's                                |        727 |
+| Super Nintendo                            |        661 |
+| Game Boy Color                            |        593 |
+| Cables & Adapters                         |        590 |
+| Sega Genesis                              |        589 |
+| Batteries & Chargers                      |        519 |
+| Nintendo NES                              |        507 |
+| Nintendo 64                               |        481 |
+| Nintendo 3DS                              |        433 |
+| Cables                                    |        397 |
+| Consoles                                  |        389 |
+| Gamepads                                  |        379 |
+| Chargers                                  |        353 |
+| Sega Dreamcast                            |        344 |
+| Game Boy                                  |        341 |
+| Sports & Outdoors                         |        330 |
+| Fan Shop                                  |        282 |
+| Video Games & Accessories                 |        273 |
+| Sega Saturn                               |        254 |
+| Digital Games & DLC                       |        242 |
+| Headsets                                  |        216 |
+| Education & Reference                     |        211 |
+| Faceplates                                |        180 |
+| Remotes                                   |        180 |
+| Adapters                                  |        176 |
+| Electronics                               |        172 |
+| Batteries                                 |        168 |
+| Lifestyle & Hobbies                       |        134 |
+| Joysticks                                 |        127 |
+| Linux Games                               |        114 |
+| Guitars                                   |        111 |
+| Racing Wheels                             |        110 |
+| Sega Game Gear                            |        109 |
+| Gaming Mice                               |        105 |
+| Early Learning                            |        103 |
+| PDAs                                      |        103 |
+| Atari 2600                                |         90 |
+| Screen Protectors                         |         89 |
+| Design & Illustration                     |         88 |
+| Computers & Accessories                   |         86 |
+| Memory                                    |         77 |
+| Fitness Accessories                       |         76 |
+| Sega CD                                   |         73 |
+| Accessories & Supplies                    |         72 |
+| Commodore 64                              |         72 |
+| Toys & Games                              |         71 |
+| Mac Game Downloads                        |         70 |
+| Gaming Keyboards                          |         68 |
+| Audio & Video Accessories                 |         57 |
+| Home Publishing                           |         57 |
+| Sega Master System                        |         56 |
+| Intellivision                             |         55 |
+| TurboGrafx 16                             |         55 |
+| Wii U                                     |         53 |
+| 3DO                                       |         50 |
+| PlayStation Vita                          |         48 |
+| Cables & Accessories                      |         44 |
+| Drums                                     |         44 |
+| Cables & Interconnects                    |         43 |
+| Flight Controls                           |         40 |
+| NEOGEO Pocket                             |         32 |
+| Dance Mats                                |         30 |
+| Electronics for Kids                      |         30 |
+| Thinking & Problem Solving                |         29 |
+| Geography                                 |         26 |
+| Home & Kitchen                            |         26 |
+| Microphones                               |         26 |
+| Steering Wheels                           |         26 |
+| Movies & TV                               |         25 |
+| United States                             |         25 |
+| Business & Office                         |         24 |
+| Carleton                                  |         24 |
+| Michigan                                  |         24 |
+| Purchase Circles                          |         24 |
+| Leisure Sports & Game Room                |         23 |
+| Speakers                                  |         23 |
+| Math                                      |         22 |
+| Networking                                |         22 |
+| Utilities                                 |         22 |
+| Commodore Amiga                           |         21 |
+| Science                                   |         21 |
+| Gift Cards                                |         20 |
+| CDs & Vinyl                               |         19 |
+| Musical Instruments                       |         19 |
+| Reading & Language                        |         19 |
+| Sensor Bars                               |         19 |
+| Board Games                               |         18 |
+| Music                                     |         18 |
+| Typing                                    |         18 |
+| Movies                                    |         17 |
+| Atari 7800                                |         16 |
+| Atari Lynx                                |         16 |
+| Computer Components                       |         16 |
+| Computer Recording                        |         16 |
+| Studio Recording Equipment                |         16 |
+| Atari Jaguar                              |         15 |
+| Furniture                                 |         15 |
+| Headsets & Microphones                    |         14 |
+| Home Entertainment Furniture              |         14 |
+| Science & Nature                          |         14 |
+| Art & Creativity                          |         13 |
+| History                                   |         12 |
+| Cell Phones & Accessories                 |         11 |
+| Keyboards                                 |         11 |
+| Office Products                           |         11 |
+| Cooking & Health                          |         10 |
+| Dictionaries                              |         10 |
+| Artwork                                   |          9 |
+| Hunting & Fishing                         |          9 |
+| Interactive Gaming Figures                |          9 |
+| PlayStation 4                             |          9 |
+| Posters & Prints                          |          9 |
+| Xbox One                                  |          9 |
+| LIVE                                      |          8 |
+| Languages                                 |          8 |
+| Office Electronics                        |          8 |
+| Subscription Cards                        |          8 |
+| TV                                        |          8 |
+| Trading Card Games                        |          7 |
+| AC Adapters                               |          6 |
+| Batteries, Chargers & Accessories         |          6 |
+| Electronic Toys                           |          6 |
+| Exercise & Fitness                        |          6 |
+| Fashion & Beauty                          |          6 |
+| Input Devices                             |          6 |
+| Maps & Atlases                            |          6 |
+| Numeric Keypads                           |          6 |
+| PC Headsets                               |          6 |
+| Remote Controls                           |          6 |
+| TV Remote Controls                        |          6 |
+| Video                                     |          6 |
+| Video Cables                              |          6 |
+| Casino Equipment                          |          5 |
+| Classical                                 |          5 |
+| Decks & Sets                              |          5 |
+| Distribution                              |          5 |
+| Memory Cards                              |          5 |
+| PC Maintenance                            |          5 |
+| Poker Equipment                           |          5 |
+| Pop                                       |          5 |
+| Portable Audio & Video                    |          5 |
+| Programming & Web Development             |          5 |
+| Religion                                  |          5 |
+| Test Preparation                          |          5 |
+| Tools & Home Improvement                  |          5 |
+| Video Game Chairs                         |          5 |
+| Writing & Literature                      |          5 |
+| Action Figures                            |          4 |
+| Action Figures & Statues                  |          4 |
+| Air Guns                                  |          4 |
+| Airsoft, Air Guns & Slingshots            |          4 |
+| Apps for Android                          |          4 |
+| Atari 5200                                |          4 |
+| CAD                                       |          4 |
+| Camera & Photo                            |          4 |
+| ColecoVision                              |          4 |
+| Connectors & Adapters                     |          4 |
+| Encyclopedias                             |          4 |
+| Fire TV                                   |          4 |
+| Home & Garden Design                      |          4 |
+| Instrument Instruction                    |          4 |
+| Jigsaw Puzzles                            |          4 |
+| Mice                                      |          4 |
+| Networking Products                       |          4 |
+| Operating Systems                         |          4 |
+| Plug & Play Video Games                   |          4 |
+| Puzzles                                   |          4 |
+| Scanners & Accessories                    |          4 |
+| Selector Switch Boxes                     |          4 |
+| Sound Editing                             |          4 |
+| Television & Video                        |          4 |
+| Training Equipment                        |          4 |
+| Alternative Rock                          |          3 |
+| Animation & 3D                            |          3 |
+| Bag Gloves                                |          3 |
+| Card Games                                |          3 |
+| Cases                                     |          3 |
+| Children's Music                          |          3 |
+| Clip Art                                  |          3 |
+| Component Amplifiers                      |          3 |
+| Disney                                    |          3 |
+| Drums & Percussion                        |          3 |
+| Exercise Videos                           |          3 |
+| HDMI Cables                               |          3 |
+| Home Audio                                |          3 |
+| Laptop & Netbook Computer Accessories     |          3 |
+| Martial Arts                              |          3 |
+| Metal                                     |          3 |
+| Network Adapters                          |          3 |
+| Other Sports                              |          3 |
+| Receivers & Amplifiers                    |          3 |
+| Screen Savers                             |          3 |
+| Sports Equipment                          |          3 |
+| Stereo Components                         |          3 |
+| Team Sports                               |          3 |
+| Television Stands & Entertainment Centers |          3 |
+| USB Cables                                |          3 |
+| USB Network Adapters                      |          3 |
+| Web Design                                |          3 |
+| World Music                               |          3 |
+| Antivirus & Security                      |          2 |
+| Arts                                      |          2 |
+| Bags & Cases                              |          2 |
+| Basic Cases                               |          2 |
+| Blues                                     |          2 |
+| Boating & Water Sports                    |          2 |
+| Car & Vehicle Electronics                 |          2 |
+| Clothing                                  |          2 |
+| Composite Video                           |          2 |
+| Computer Cable Adapters                   |          2 |
+| Currency Cards                            |          2 |
+| DVD Viewing & Burning                     |          2 |
+| Document Management                       |          2 |
+| Equestrian Sports                         |          2 |
+| Exercise Balls & Accessories              |          2 |
+| Genealogy                                 |          2 |
+| Greeting Cards                            |          2 |
+| Hand Tools                                |          2 |
+| Horse Driving Equipment                   |          2 |
+| Internet Security                         |          2 |
+| Kitchen & Dining                          |          2 |
+| Linux & Unix                              |          2 |
+| MP3 Editing & Effects                     |          2 |
+| Music Creation & Sequencing               |          2 |
+| Office & School Supplies                  |          2 |
+| Office Suites                             |          2 |
+| PC Microphones                            |          2 |
+| Personal Defense Equipment                |          2 |
+| Poker Layouts                             |          2 |
+| Poker Sets                                |          2 |
+| Power & Hand Tools                        |          2 |
+| Power Cables                              |          2 |
+| Professional Development                  |          2 |
+| Rackets                                   |          2 |
+| Rock                                      |          2 |
+| Sound Libraries                           |          2 |
+| Soundtracks                               |          2 |
+| Table Tennis                              |          2 |
+| Tactical & Duty                           |          2 |
+| Touch Screen Tablet Accessories           |          2 |
+| 3D Glasses                                |          1 |
+| Accounting & Finance                      |          1 |
+| Adjustable Chairs                         |          1 |
+| Ankle Weights                             |          1 |
+| Archery                                   |          1 |
+| Arts, Crafts & Sewing                     |          1 |
+| Auto Accessories                          |          1 |
+| Automotive                                |          1 |
+| Backup                                    |          1 |
+| Ballads                                   |          1 |
+| Ballets & Dances                          |          1 |
+| Bar Code Scanners                         |          1 |
+| Baseball                                  |          1 |
+| Baseball Equipment                        |          1 |
+| Baseball Gear                             |          1 |
+| Basketball                                |          1 |
+| Basketball Equipment                      |          1 |
+| Basketballs                               |          1 |
+| Billiard Balls                            |          1 |
+| Billiards & Pool                          |          1 |
+| Binocular, Camera & Camcorder Straps      |          1 |
+| Blank Video Media                         |          1 |
+| Bluetooth Car Kits                        |          1 |
+| Bluetooth Headsets                        |          1 |
+| Boat Plumbing                             |          1 |
+| Boating                                   |          1 |
+| Bowls                                     |          1 |
+| Building Sets                             |          1 |
+| Building Toys                             |          1 |
+| CD Burning & Labeling                     |          1 |
+| Canned & Jarred Food                      |          1 |
+| Canned, Dry & Packaged Foods              |          1 |
+| Car Accessories                           |          1 |
+| Car Chargers                              |          1 |
+| Car Cradles & Mounts                      |          1 |
+| Car Mounts                                |          1 |
+| Case Fans                                 |          1 |
+| Cases & Sleeves                           |          1 |
+| Ceiling Lights                            |          1 |
+| Cereal Bowls                              |          1 |
+| Chairs & Sofas                            |          1 |
+| Chamber Music                             |          1 |
+| Character Pieces                          |          1 |
+| Christian                                 |          1 |
+| Coffee Machines                           |          1 |
+| Coffee Makers                             |          1 |
+| Coffee, Tea & Espresso                    |          1 |
+| CompactFlash Cards                        |          1 |
+| Component Video                           |          1 |
+| Compositing & Effects                     |          1 |
+| Concertos                                 |          1 |
+| Craft Supplies                            |          1 |
+| DVD Games                                 |          1 |
+| DVD Players & Recorders                   |          1 |
+| Dance & Electronic                        |          1 |
+| Data Storage                              |          1 |
+| Database                                  |          1 |
+| Desk Accessories & Workspace Organizers   |          1 |
+| Diets & Weight Loss                       |          1 |
+| Digital Cameras                           |          1 |
+| Dining & Entertaining                     |          1 |
+| Docking Stations                          |          1 |
+| Downloadable Content                      |          1 |
+| Dress Up & Pretend Play                   |          1 |
+| Drum Sets                                 |          1 |
+| Drum Sets & Set Components                |          1 |
+| Electronics & Gadgets                     |          1 |
+| Fans & Cooling                            |          1 |
+| Fantasies                                 |          1 |
+| Far East & Asia                           |          1 |
+| Fishing                                   |          1 |
+| Flashlights                               |          1 |
+| Folk & World Hand Drums                   |          1 |
+| Fonts                                     |          1 |
+| Forms & Genres                            |          1 |
+| Game Calls                                |          1 |
+| Golf                                      |          1 |
+| Grocery & Gourmet Food                    |          1 |
+| Handheld Flashlights                      |          1 |
+| Heads                                     |          1 |
+| Health, Fitness & Dieting                 |          1 |
+| Hiking & Camping                          |          1 |
+| Hockey Equipment                          |          1 |
+| Hockey Pucks                              |          1 |
+| Home Office Desk Chairs                   |          1 |
+| Home Office Furniture                     |          1 |
+| Hubs                                      |          1 |
+| Hunting                                   |          1 |
+| I/O Port Cards                            |          1 |
+| Ice Hockey                                |          1 |
+| Instructional                             |          1 |
+| Interior                                  |          1 |
+| Internal CD Drives                        |          1 |
+| Internal Optical Drives                   |          1 |
+| Japan                                     |          1 |
+| Labels & Stickers                         |          1 |
+| Labels, Indexes & Stamps                  |          1 |
+| Lamps                                     |          1 |
+| Learning & Education                      |          1 |
+| Leathercraft                              |          1 |
+| Legal                                     |          1 |
+| Light Guns                                |          1 |
+| Lighting & Ceiling Fans                   |          1 |
+| Looping & Remixing                        |          1 |
+| MIDI                                      |          1 |
+| MP3 Player Accessories                    |          1 |
+| MP3 Players & Accessories                 |          1 |
+| Mac Operating Systems                     |          1 |
+| Managerial & Executive Chairs             |          1 |
+| Media Storage                             |          1 |
+| Memory Sticks                             |          1 |
+| Mobile Utilities                          |          1 |
+| Money Management & Budgeting              |          1 |
+| Mouse Pads                                |          1 |
+| Mouse Pads & Wrist Rests                  |          1 |
+| Movie Scores                              |          1 |
+| Movie Soundtracks                         |          1 |
+| New England                               |          1 |
+| New Wave                                  |          1 |
+| New Wave & Post-Punk                      |          1 |
+| Nocturnes                                 |          1 |
+| Northeast                                 |          1 |
+| Office Furniture & Lighting               |          1 |
+| Other Diets                               |          1 |
+| Other Office Equipment                    |          1 |
+| Paint, Body & Trim                        |          1 |
+| Painting Supplies & Wall Treatments       |          1 |
+| Personal Finance                          |          1 |
+| Photography                               |          1 |
+| Pipe Fittings                             |          1 |
+| Pipes, Pipe Fittings & Accessories        |          1 |
+| Point & Shoot Digital Cameras             |          1 |
+| Points & Currency Cards                   |          1 |
+| Poker Chips                               |          1 |
+| Portable DVD Players                      |          1 |
+| Power Adapters                            |          1 |
+| Preludes                                  |          1 |
+| Pretend Play                              |          1 |
+| Printer Labels: Laser & Inkjet            |          1 |
+| Printers                                  |          1 |
+| Printers & Accessories                    |          1 |
+| Production Stations                       |          1 |
+| Programming Languages                     |          1 |
+| Pucks                                     |          1 |
+| R&B                                       |          1 |
+| RF Modulators                             |          1 |
+| Replacement Parts                         |          1 |
+| Reports                                   |          1 |
+| Rod & Reel Storage                        |          1 |
+| Rod Racks                                 |          1 |
+| Rough Plumbing                            |          1 |
+| SD & SDHC Cards                           |          1 |
+| Serial Port Cards                         |          1 |
+| Short Forms                               |          1 |
+| Single Cards                              |          1 |
+| Skins & Decals                            |          1 |
+| Sleeves & Slipcases                       |          1 |
+| Soul                                      |          1 |
+| Soups, Stews & Chili                      |          1 |
+| Steering System                           |          1 |
+| Streaming Media Players                   |          1 |
+| Strength Training Equipment               |          1 |
+| Suites                                    |          1 |
+| Taps & Dies                               |          1 |
+| Targets                                   |          1 |
+| Telephones & Accessories                  |          1 |
+| Towables                                  |          1 |
+| Track, Rail & Cable Lighting              |          1 |
+| Training                                  |          1 |
+| Travel                                    |          1 |
+| Travel Chargers                           |          1 |
+| Tributes                                  |          1 |
+| Trim                                      |          1 |
+| Turkey                                    |          1 |
+| USB Flash Drives                          |          1 |
+| VGA Cables                                |          1 |
+| Vehicle Electronics Accessories           |          1 |
+| Video Projector Accessories               |          1 |
+| Voice Recognition                         |          1 |
+| Wall Stickers & Murals                    |          1 |
+| Waltzes                                   |          1 |
+| Waterskiing & Towsports                   |          1 |
+| Web Effects                               |          1 |
+| Web Site Hosting                          |          1 |
+| Wired Headsets                            |          1 |
+| Word Processing                           |          1 |
+| eBook Readers & Accessories               |          1 |
++-------------------------------------------+------------+

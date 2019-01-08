@@ -39,6 +39,11 @@ $              --verbose                                        \
 $              -j 8
 ```
 
+You can find a table showing the amount of items of each category in
+the db [before](https://github.com/TheJena/RecommenderSystem/raw/master/docs/table_counting_items_in_each_category_before_db_shrinking.txt)
+and [after](https://github.com/TheJena/RecommenderSystem/raw/master/docs/table_counting_items_in_each_category_after_db_shrinking.txt)
+the original db reduction.
+
 License
 =======
 
