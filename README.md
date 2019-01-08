@@ -23,6 +23,22 @@ Please take a look
 if you re interested in how the huge size of the "Amazon reviews"
 dataset from [SNAP](https://snap.stanford.edu) has been reduced.
 
+How to import MongoDB dump
+==========================
+
+First of all start a clean MongoDB instance; then in order to import
+the compressed
+[test](https://github.com/TheJena/RecommenderSystem/raw/master/dataset/shrinked_test_db.mongodump.gz)
+db dump into your MongoDB you can simply run:
+
+```
+$ mongorestore --archive ./shrinked_test_db.mongodump.gz        \
+$              --gzip                                           \
+$              --objcheck                                       \
+$              --verbose                                        \
+$              -j 8
+```
+
 License
 =======
 
