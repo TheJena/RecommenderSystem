@@ -161,25 +161,19 @@ reviews = {d['_id']: dict() for d in db.reviews.aggregate(
     allowDiskUse=True)}
 
 items, users, num_reviews = set(), set(), 0
-try:
-    for asin in reviews.keys():
-        for d in db.reviews.find({'asin': asin},
-                                 {'_id': 0, 'reviewerID': 1, 'overall': 1}):
-            if len(users) >= args.max_users:
-                raise Exception('maximum number of users reached')
-
-            user, stars = d['reviewerID'], d['overall']
+for asin in reviews.keys():
+    for d in db.reviews.find({'asin': asin},
+                             {'_id': 0, 'reviewerID': 1, 'overall': 1}):
+        user, stars = d['reviewerID'], d['overall']
+        if len(users) < args.max_users or user in users:
             reviews[asin][user] = int(stars)
             num_reviews += 1
             users.add(user)
             items.add(asin)
-except Exception as e:
-    if str(e) != 'maximum number of users reached':
-        raise e
-    # we did not collect all the items with a review, so the 'reviews' dict
-    # could have some keys with an empty dict as value; let us remove them
-    for asin in set(reviews.keys()) - items:
-        del reviews[asin]
+# remove from 'reviews' dict keys with an empty dict as value
+for asin in set(reviews.keys()) - items:
+    print(asin)
+    del reviews[asin]
 
 print(f'n° items: {len(items): >11}')
 print(f'n° users: {len(users): >11}')
@@ -204,4 +198,4 @@ elif extension == 'yaml':
     except AttributeError:
         dumper = yaml.Dumper
     with open(args.out, 'w') as f:
-        f.write(yaml.dump(data, default_flow_style=False, Dumper=dumper))
+        yaml.dump(data, f, default_flow_style=False, Dumper=dumper)
