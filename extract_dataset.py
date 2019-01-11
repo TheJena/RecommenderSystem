@@ -37,17 +37,15 @@ def indented_wrapped_repr(iterable):
 parser = ArgumentParser(
     description='Extract amazon reviews from a dataset on MongoDB.',
     epilog='Output files contains a dictionary like:\n'
-    '\t{"descriptions": {\n'
-    '\t\t"<asin>": "<description of the item>",\n'
-    '\t\t  ...       ...\n'
+    '\t{"<asin>": {\n'
+    '\t\t"description": "<description of the item>",\n'
+    '\t\t 5:             <list of reviewerID>,\n'
+    '\t\t 4:             <list of reviewerID>,\n'
+    '\t\t 3:             <list of reviewerID>,\n'
+    '\t\t 2:             <list of reviewerID>,\n'
+    '\t\t 1:             <list of reviewerID>\n'
     '\t\t},\n'
-    '\t "reviews": {\n'
-    '\t\t"<asin>": {\n'
-    '\t\t\t"<reviewerID>": <1 to 5 stars>,\n'
-    '\t\t\t  ...            ...\n'
-    '\t\t\t},\n'
-    '\t\t  ...\n'
-    '\t\t}\n'
+    '\t\t...\n'
     '\t }\n ',
     formatter_class=RawTextHelpFormatter)
 output_fmts = ('json', 'pickle', 'yaml')
@@ -134,7 +132,7 @@ try:
               f'{indented_wrapped_repr(set(db.meta.distinct("categories")))}.')
         raise SystemExit()
     elif args.out is not None and args.out.split('.')[-1] not in output_fmts:
-        raise SystemExit('ERROR: output file format not supported!\n'
+        raise SystemExit('ERROR: output file format not supported!\n\n'
                          f'{parser.format_help()}')
 except OperationFailure as e:
     if 'authentication failed' in str(e).lower():
@@ -154,26 +152,32 @@ allowed_items = [d['asin'] for d in db.meta.find(
     {'categories': {'$in': args.categories}},
     {'_id': 0, 'asin': 1})]
 
-reviews = {d['_id']: dict() for d in db.reviews.aggregate(
+all_users = {d['_id']: dict() for d in db.reviews.aggregate(
     [{'$match': {'asin': {'$in': allowed_items}}},
-     {'$sortByCount': '$asin'},
-     {'$limit': args.max_items}],
+     {'$sortByCount': '$reviewerID'},
+     {'$match': {'count': {'$gte': args.min_reviews,
+                           '$lte': args.max_reviews}}},
+     {'$limit': args.max_users}],
     allowDiskUse=True)}
 
-items, users, num_reviews = set(), set(), 0
-for asin in reviews.keys():
-    for d in db.reviews.find({'asin': asin},
-                             {'_id': 0, 'reviewerID': 1, 'overall': 1}):
-        user, stars = d['reviewerID'], d['overall']
-        if len(users) < args.max_users or user in users:
-            reviews[asin][user] = int(stars)
+items = set()
+users = set()
+num_reviews = 0
+reviews = dict()
+for user in all_users:
+    query = ({'reviewerID': user, 'asin': {'$in': allowed_items}},
+             {'_id': 0, 'asin': 1, 'overall': 1})
+    for d in db.reviews.find(*query):
+        asin, stars = d['asin'], int(d['overall'])
+        if len(items) < args.max_items or asin in items:
+            if asin not in reviews:
+                reviews[asin] = dict()
+            if stars not in reviews[asin]:
+                reviews[asin][stars] = list()
+            reviews[asin][stars].append(user)
             num_reviews += 1
             users.add(user)
             items.add(asin)
-# remove from 'reviews' dict keys with an empty dict as value
-for asin in set(reviews.keys()) - items:
-    print(asin)
-    del reviews[asin]
 
 print(f'n° items: {len(items): >11}')
 print(f'n° users: {len(users): >11}')
@@ -181,21 +185,24 @@ print(f'n° reviews: {num_reviews: >9}')
 
 if args.out is None:
     raise SystemExit()
+elif not items or not users:
+    raise SystemExit('ERROR: too few items or users; no output file produced')
 
-data = dict(reviews=reviews, descriptions={a: next(db.meta.find(
-    {'asin': a}, {'_id': 0, 'description': 1}))['description'] for a in items})
+for a in items:
+    reviews[a]['description'] = next(
+        db.meta.find({'asin': a}, {'_id': 0, 'description': 1}))['description']
 
 extension = args.out.split('.')[-1]
 if extension == 'json':
     with open(args.out, 'w') as f:
-        json.dump(data, f, indent=' ' * 4, sort_keys=True)
+        json.dump(reviews, f, indent=' ' * 4)
 elif extension == 'pickle':
     with open(args.out, 'wb') as f:
-        pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(reviews, f, protocol=pickle.HIGHEST_PROTOCOL)
 elif extension == 'yaml':
     try:
         dumper = yaml.CDumper
     except AttributeError:
         dumper = yaml.Dumper
     with open(args.out, 'w') as f:
-        yaml.dump(data, f, default_flow_style=False, Dumper=dumper)
+        yaml.dump(reviews, f, default_flow_style=False, Dumper=dumper)
