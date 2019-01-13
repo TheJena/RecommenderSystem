@@ -39,11 +39,11 @@ parser = ArgumentParser(
     epilog='Output files contains a dictionary like:\n'
     '\t{"<asin>": {\n'
     '\t\t"description": "<description of the item>",\n'
-    '\t\t 5:             <list of reviewerID>,\n'
-    '\t\t 4:             <list of reviewerID>,\n'
-    '\t\t 3:             <list of reviewerID>,\n'
-    '\t\t 2:             <list of reviewerID>,\n'
-    '\t\t 1:             <list of reviewerID>\n'
+    '\t\t"5":            <list of reviewerID>,\n'
+    '\t\t"4":            <list of reviewerID>,\n'
+    '\t\t"3":            <list of reviewerID>,\n'
+    '\t\t"2":            <list of reviewerID>,\n'
+    '\t\t"1":            <list of reviewerID>\n'
     '\t\t},\n'
     '\t\t...\n'
     '\t }\n ',
@@ -152,7 +152,7 @@ allowed_items = [d['asin'] for d in db.meta.find(
     {'categories': {'$in': args.categories}},
     {'_id': 0, 'asin': 1})]
 
-all_users = {d['_id']: dict() for d in db.reviews.aggregate(
+all_users = {str(d['_id']): dict() for d in db.reviews.aggregate(
     [{'$match': {'asin': {'$in': allowed_items}}},
      {'$sortByCount': '$reviewerID'},
      {'$match': {'count': {'$gte': args.min_reviews,
@@ -168,7 +168,7 @@ for user in all_users:
     query = ({'reviewerID': user, 'asin': {'$in': allowed_items}},
              {'_id': 0, 'asin': 1, 'overall': 1})
     for d in db.reviews.find(*query):
-        asin, stars = d['asin'], int(d['overall'])
+        asin, stars = str(d['asin']), str(int(d['overall']))
         if len(items) < args.max_items or asin in items:
             if asin not in reviews:
                 reviews[asin] = dict()

@@ -67,11 +67,11 @@ parser = ArgumentParser(
     epilog='Input file should contain a dictionary like:\n'
     '\t{"<asin>": {\n'
     '\t\t"description": "<description of the item>",\n'
-    '\t\t 5:             <list of reviewerID>,\n'
-    '\t\t 4:             <list of reviewerID>,\n'
-    '\t\t 3:             <list of reviewerID>,\n'
-    '\t\t 2:             <list of reviewerID>,\n'
-    '\t\t 1:             <list of reviewerID>\n'
+    '\t\t"5":            <list of reviewerID>,\n'
+    '\t\t"4":            <list of reviewerID>,\n'
+    '\t\t"3":            <list of reviewerID>,\n'
+    '\t\t"2":            <list of reviewerID>,\n'
+    '\t\t"1":            <list of reviewerID>\n'
     '\t\t},\n'
     '\t\t...\n'
     '\t }\n ',
@@ -92,7 +92,7 @@ if args.input is not None and args.input.split('.')[-1] not in input_fmts:
 extension = args.input.split('.')[-1]
 if extension == 'json':
     with open(args.input, 'r') as f:
-        data = json.load(f, parse_int=int)
+        data = json.load(f)
 elif extension == 'pickle':
     with open(args.input, 'rb') as f:
         data = pickle.load(f)
