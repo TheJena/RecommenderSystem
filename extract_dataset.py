@@ -37,16 +37,26 @@ def indented_wrapped_repr(iterable):
 parser = ArgumentParser(
     description='Extract amazon reviews from a dataset on MongoDB.',
     epilog='Output files contains a dictionary like:\n'
-    '\t{"<asin>": {\n'
-    '\t\t"description": "<description of the item>",\n'
-    '\t\t"5":            <list of reviewerID>,\n'
-    '\t\t"4":            <list of reviewerID>,\n'
-    '\t\t"3":            <list of reviewerID>,\n'
-    '\t\t"2":            <list of reviewerID>,\n'
-    '\t\t"1":            <list of reviewerID>\n'
+    '\t{"test_set": {\n'
+    '\t\t"<asin>": {"5": <list of reviewerID>,\n'
+    '\t\t           "4": <list of reviewerID>,\n'
+    '\t\t           "3": <list of reviewerID>,\n'
+    '\t\t           "2": <list of reviewerID>,\n'
+    '\t\t           "1": <list of reviewerID>},\n'
+    '\t\t  ...\n'
     '\t\t},\n'
-    '\t\t...\n'
-    '\t }\n ',
+    '\t"training_set": {\n'
+    '\t\t"<asin>": {"5": <list of reviewerID>,\n'
+    '\t\t           "4": <list of reviewerID>,\n'
+    '\t\t           "3": <list of reviewerID>,\n'
+    '\t\t           "2": <list of reviewerID>,\n'
+    '\t\t           "1": <list of reviewerID>},\n'
+    '\t\t  ...\n'
+    '\t\t},\n'
+    '\t"descriptions": {"<asin>": "description of the item",\n'
+    '\t                   ...      ...\n'
+    '\t\t}\n'
+    '\t}',
     formatter_class=RawTextHelpFormatter)
 output_fmts = ('json', 'pickle', 'yaml')
 parser.add_argument('-l', '--category-list',
@@ -82,21 +92,17 @@ parser.add_argument('-d', '--db',
 parser.add_argument('-c', '--category',
                     action='append',
                     dest='categories',
-                    help='extract items from the given category',
+                    help='add a category from which items will be extracted',
                     metavar='str')
-parser.add_argument('-N', '--max-items',
-                    default=5 * 10**4,
-                    help='maximum number of items to extract',
-                    metavar='int',
-                    type=int)
-parser.add_argument('-M', '--max-users',
+parser.add_argument('-M', '--users',
                     default=7 * 10**5,
-                    help='maximum number of users to extract',
+                    help='number of users to extract',
                     metavar='int',
                     type=int)
-parser.add_argument('-r', '--min-reviews',
-                    default=1,
-                    help='ignore users with less than min-reviews',
+parser.add_argument('-T', '--reviews',
+                    choices=(30, 40, 50, 60),
+                    default=30,
+                    help='number of reviews to extract for each user',
                     metavar='int',
                     type=int)
 parser.add_argument('-R', '--max-reviews',
@@ -148,49 +154,63 @@ except OperationFailure as e:
 args.categories = ['Video Games'] if not args.categories else args.categories
 print(f'Using categories:\n{indented_wrapped_repr(args.categories)}.\n')
 
-allowed_items = [d['asin'] for d in db.meta.find(
-    {'categories': {'$in': args.categories}},
-    {'_id': 0, 'asin': 1})]
-
-all_users = {str(d['_id']): dict() for d in db.reviews.aggregate(
-    [{'$match': {'asin': {'$in': allowed_items}}},
-     {'$sortByCount': '$reviewerID'},
-     {'$match': {'count': {'$gte': args.min_reviews,
-                           '$lte': args.max_reviews}}},
-     {'$limit': args.max_users}],
-    allowDiskUse=True)}
+allowed_items = tuple(str(d['_id']) for d in db.reviews.aggregate(
+    [{'$match': {'asin': {'$in': list(d['asin'] for d in db.meta.find(
+        {'categories': {'$in': args.categories}},
+        projection={'_id': False, 'asin': True}))}}},
+     {'$sortByCount': '$asin'},
+     {'$limit': args.users * args.reviews}],
+    allowDiskUse=True,
+    batchSize=args.reviews))
 
 items = set()
-users = set()
-num_reviews = 0
-reviews = dict()
-for user in all_users:
-    query = ({'reviewerID': user, 'asin': {'$in': allowed_items}},
-             {'_id': 0, 'asin': 1, 'overall': 1})
-    for d in db.reviews.find(*query):
+users = tuple(str(d['_id']) for d in db.reviews.aggregate(
+    [{'$match': {'asin': {'$in': allowed_items}}},
+     {'$sortByCount': '$reviewerID'},
+     {'$match': {'count': {'$gte': args.reviews,
+                           '$lte': args.max_reviews}}},
+     {'$limit': args.users}],
+    allowDiskUse=True,
+    batchSize=args.users))
+
+reviews = dict(test_set=dict(), training_set=dict(), descriptions=dict())
+for user in users:
+    i = 0
+    for item in allowed_items:
+        if i >= args.reviews:
+            break
+        d = next(db.reviews.find({'reviewerID': user, 'asin': item},
+                                 projection={'_id': False,
+                                             'asin': True,
+                                             'overall': True},
+                                 limit=1),
+                 None)
+        if d is None:
+            continue
+        data = reviews['test_set'] if i < 10 else reviews['training_set']
         asin, stars = str(d['asin']), str(int(d['overall']))
-        if len(items) < args.max_items or asin in items:
-            if asin not in reviews:
-                reviews[asin] = dict()
-            if stars not in reviews[asin]:
-                reviews[asin][stars] = list()
-            reviews[asin][stars].append(user)
-            num_reviews += 1
-            users.add(user)
-            items.add(asin)
+        if asin not in data:
+            data[asin] = dict()
+        if stars not in data[asin]:
+            data[asin][stars] = list()
+        data[asin][stars].append(user)
+        items.add(asin)
+        i += 1
 
 print(f'n° items: {len(items): >11}')
 print(f'n° users: {len(users): >11}')
-print(f'n° reviews: {num_reviews: >9}')
+print(f'n° reviews: {len(users) * args.reviews: >9}')
 
 if args.out is None:
     raise SystemExit()
-elif not items or not users:
-    raise SystemExit('ERROR: too few items or users; no output file produced')
 
 for a in items:
-    reviews[a]['description'] = next(
-        db.meta.find({'asin': a}, {'_id': 0, 'description': 1}))['description']
+    reviews['descriptions'][a] = next(
+        db.meta.find({'asin': a},
+                     projection={'_id': False,
+                                 'description': True},
+                     limit=1)
+    )['description']
 
 extension = args.out.split('.')[-1]
 if extension == 'json':
