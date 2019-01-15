@@ -61,88 +61,118 @@ class Observation():
         return f'{self.user} ~> ({self.preference})'
 
 
+def reviews_generator(data):
+    for asin, d in data.items():
+        for stars, reviewers in d.items():
+            if stars not in tuple(str(i) for i in range(1, 6)):
+                raise ValueError(f'Invalid stars: "{repr(stars)}"; '
+                                 'string expected.')
+            for user in reviewers:
+                yield dict(user=str(user), item=str(asin), stars=int(stars))
+
+
 parser = ArgumentParser(
     description='Apply the collaborative-ranking approach called GRank to a '
     'dataset of Amazon reviews.',
-    epilog='Input file should contain a dictionary like:\n'
-    '\t{"<asin>": {\n'
-    '\t\t"description": "<description of the item>",\n'
-    '\t\t"5":            <list of reviewerID>,\n'
-    '\t\t"4":            <list of reviewerID>,\n'
-    '\t\t"3":            <list of reviewerID>,\n'
-    '\t\t"2":            <list of reviewerID>,\n'
-    '\t\t"1":            <list of reviewerID>\n'
-    '\t\t},\n'
-    '\t\t...\n'
-    '\t }\n ',
     formatter_class=RawTextHelpFormatter)
-input_fmts = ('json', 'pickle', 'yaml')
-parser.add_argument('-i', '--input',
-                    default=None,
-                    help=f'load dataset from .{", .".join(input_fmts)} file.',
-                    metavar='file',
-                    required=True,
-                    type=str)
+allowed_formats = ('json', 'pickle', 'yaml')
+parser.add_argument(help='load dataset from: '
+                    f'.{", .".join(allowed_formats)} file.\n'
+                    'It should contain a dictionary like:\n'
+                    '\t{"test_set": {\n'
+                    '\t\t"<asin>": {"5": <list of reviewerID>,\n'
+                    '\t\t           "4": <list of reviewerID>,\n'
+                    '\t\t           "3": <list of reviewerID>,\n'
+                    '\t\t           "2": <list of reviewerID>,\n'
+                    '\t\t           "1": <list of reviewerID>},\n'
+                    '\t\t  ...\n'
+                    '\t\t},\n'
+                    '\t"training_set": {\n'
+                    '\t\t"<asin>": {"5": <list of reviewerID>,\n'
+                    '\t\t           "4": <list of reviewerID>,\n'
+                    '\t\t           "3": <list of reviewerID>,\n'
+                    '\t\t           "2": <list of reviewerID>,\n'
+                    '\t\t           "1": <list of reviewerID>},\n'
+                    '\t\t  ...\n'
+                    '\t\t},\n'
+                    '\t"descriptions": {"<asin>": "description of the item",\n'
+                    '\t                   ...      ...\n'
+                    '\t\t}\n'
+                    '\t}',
+                    dest='input',
+                    metavar='input_file',
+                    type=open)
 args = parser.parse_args()
 
-if args.input is not None and args.input.split('.')[-1] not in input_fmts:
+if args.input.name.split('.')[-1] not in allowed_formats:
     raise SystemExit('ERROR: input file format not supported!\n\n'
                      f'{parser.format_help()}')
 
-extension = args.input.split('.')[-1]
+extension = args.input.name.split('.')[-1]
 if extension == 'json':
-    with open(args.input, 'r') as f:
-        data = json.load(f)
+    data = json.load(args.input)
 elif extension == 'pickle':
-    with open(args.input, 'rb') as f:
-        data = pickle.load(f)
+    data = pickle.load(open(args.input.name, 'rb'))
 elif extension == 'yaml':
     try:
         loader = yaml.CLoader
     except AttributeError:
         loader = yaml.Loader
-    with open(args.input, 'r') as f:
-        data = yaml.load(f, Loader=loader)
+    data = yaml.load(args.input, Loader=loader)
 
-items = set(data.keys())
-print(f'n° items: {len(items): >15}')
+test_set_reviews = tuple(reviews_generator(data['test_set']))
+training_set_reviews = tuple(reviews_generator(data['training_set']))
 
-reviews, users = list(), set()
-for i, d in data.items():
-    for k, v in d.items():
-        if k == 'description':
-            continue
-        for u in v:
-            reviews.append(dict(user=str(u), item=str(i), stars=int(k)))
-            users.add(u)
-print(f'n° users: {len(users): >15}')
-print(f'n° reviews: {len(reviews): >13}')
+users = set(d['user'] for d in training_set_reviews)
+users |= set(d['user'] for d in test_set_reviews)
+print(f'n° users: {len(users): >15}'
+      ' (both training and test set)')
 
-if not items or not users:
-    raise SystemExit('ERROR: too few items or users')
+items = set(d['item'] for d in training_set_reviews)
+items |= set(d['item'] for d in test_set_reviews)
+print(f'n° items: {len(items): >15}'
+      ' (both training and test set)')
+
+print(f'n° reviews: {len(training_set_reviews): >13}'
+      ' (only training          set)')
+
+comparisons = tuple(
+    (S, s) for S in range(5, 1, -1) for s in range(S - 1, 0, -1))
 
 observations = list()
-for user in users:
-    user_reviews = {s: [] for s in range(1, 6)}
-    for d in reviews:
-        if d['user'] != user:
-            continue
-        user_reviews[d['stars']].append(d['item'])
-    for high_stars in range(5, 1, -1):
-        for low_stars in range(high_stars - 1, 0, -1):
-            for d_item in user_reviews[high_stars]:
-                for u_item in user_reviews[low_stars]:
-                    observations.append(
-                        Observation(user, Preference(d_item, u_item)))
-print(f'n° preferences: {len(observations): > 9}')
+for u in users:
+    user_reviews = {s: set() for s in range(1, 6)}
+    for d in (d for d in training_set_reviews if d['user'] == u):
+        user_reviews[int(d['stars'])].add(d['item'])
+
+    for more_stars, less_stars in comparisons:
+        for d_item in user_reviews[more_stars]:
+            for u_item in user_reviews[less_stars]:
+                observations.append(Observation(u, Preference(d_item, u_item)))
+print(f'n° preferences: {len(observations): > 9}'
+      ' (only training          set)')
 
 tpg = Graph()
+for user in users:
+    tpg.add_node(user, type='user')
+
+for item in items:
+    tpg.add_node(f'{item}_d', type='desirable')
+    tpg.add_node(f'{item}_u', type='undesirable')
+
 for obs in observations:
-    tpg.add_node(obs.user, type='user')
-    tpg.add_node(obs.preference.d, type='desirable')
-    tpg.add_node(obs.preference.u, type='undesirable')
     tpg.add_node(str(obs.preference), type='preference')
 
+    if obs.user not in tpg.nodes():
+        raise ValueError(f'ERROR: user node "{obs.user}" not found in TPG')
     tpg.add_edge(obs.user, str(obs.preference))
+
+    if obs.preference.d not in tpg.nodes():
+        raise ValueError(
+            f'ERROR: desirable node "{obs.preference.d}" not found in TPG')
     tpg.add_edge(str(obs.preference), obs.preference.d)
+
+    if obs.preference.u not in tpg.nodes():
+        raise ValueError(
+            f'ERROR: undesirable node "{obs.preference.u}" not found in TPG')
     tpg.add_edge(str(obs.preference), obs.preference.u)
