@@ -62,16 +62,6 @@ output_fmts = ('json', 'pickle', 'yaml')
 parser.add_argument('-l', '--category-list',
                     action='store_true',
                     help='show available categories and exit\n ')
-parser.add_argument('-a', '--addr',
-                    default='localhost',
-                    help='MongoDB server address',
-                    metavar='str',
-                    type=str)
-parser.add_argument('-p', '--port',
-                    default=27017,
-                    help='MongoDB server port',
-                    metavar='int',
-                    type=int)
 parser.add_argument('-u', '--user',
                     default=None,
                     dest='usr',
@@ -84,26 +74,48 @@ parser.add_argument('-w', '--pwd',
                     help='password to access the database',
                     metavar='str',
                     type=str)
+parser.add_argument('-a', '--addr',
+                    default='localhost',
+                    help='MongoDB server address                '
+                    '(default: localhost)',
+                    metavar='str',
+                    type=str)
+parser.add_argument('-p', '--port',
+                    default=27017,
+                    help='MongoDB server port                   '
+                    '(default: 27017)',
+                    metavar='int',
+                    type=int)
 parser.add_argument('-d', '--db',
                     default='test',
-                    help='database name\n ',
+                    help='database name                         '
+                    '(default: test)\n ',
                     metavar='str',
                     type=str)
 parser.add_argument('-c', '--category',
                     action='append',
                     dest='categories',
-                    help='add a category from which items will be extracted',
-                    metavar='str')
+                    help='extract items also from X category    '
+                    '(default: "Video Games")',
+                    metavar='X')
+parser.add_argument('-R', '--max-review',
+                    default=2 * 10**4,
+                    help='ignore users with more than r reviews '
+                    '(default: 20000)\n',
+                    metavar='r',
+                    type=int)
 parser.add_argument('-M', '--users',
-                    default=7 * 10**5,
-                    help='number of users to extract',
-                    metavar='int',
+                    default=100,
+                    help='extract m users                       '
+                    '(default: 100)',
+                    metavar='m',
                     type=int)
 parser.add_argument('-T', '--reviews',
                     choices=(30, 40, 50, 60),
                     default=30,
-                    help='number of reviews to extract for each user',
-                    metavar='int',
+                    help='extract t reviews for each user       '
+                    '(default: 30)',
+                    metavar='t',
                     type=int)
 parser.add_argument('-R', '--max-reviews',
                     default=2 * 10**4,
@@ -113,9 +125,9 @@ parser.add_argument('-R', '--max-reviews',
 parser.add_argument('-o', '--output',
                     default=None,
                     dest='out',
-                    help='dump extracted dataset to .'
-                    f'{", .".join(output_fmts)} file.',
-                    metavar='file',
+                    help='dump extracted dataset to file f\n'
+                    f'(supported extensions: .{", .".join(output_fmts)})',
+                    metavar='f',
                     type=str)
 args = parser.parse_args()
 user_pwd = f'{args.usr}:{args.pwd}@' if args.usr and args.pwd else ''
@@ -168,7 +180,7 @@ users = tuple(str(d['_id']) for d in db.reviews.aggregate(
     [{'$match': {'asin': {'$in': allowed_items}}},
      {'$sortByCount': '$reviewerID'},
      {'$match': {'count': {'$gte': args.reviews,
-                           '$lte': args.max_reviews}}},
+                           '$lte': args.max_review}}},
      {'$limit': args.users}],
     allowDiskUse=True,
     batchSize=args.users))
