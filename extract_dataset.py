@@ -22,7 +22,9 @@
 from argparse import ArgumentParser, RawTextHelpFormatter
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure
+from queue import Queue
 from textwrap import indent, wrap
+from threading import Lock, Thread
 import json
 import pickle
 import yaml
@@ -117,10 +119,11 @@ parser.add_argument('-T', '--reviews',
                     '(default: 30)',
                     metavar='t',
                     type=int)
-parser.add_argument('-R', '--max-reviews',
-                    default=2 * 10**4,
-                    help='ignore users with more than max-reviews\n ',
-                    metavar='int',
+parser.add_argument('-j', '--threads',
+                    default=8,
+                    help='run n threads in parallel             '
+                    '(default: 8)\n ',
+                    metavar='n',
                     type=int)
 parser.add_argument('-o', '--output',
                     default=None,
@@ -162,7 +165,7 @@ except OperationFailure as e:
                          '(with --help you can find other options)\n')
     raise SystemExit(f'\nERROR: {str(e)}\n')
 
-
+args.threads = 2 if args.threads < 2 else args.threads
 args.categories = ['Video Games'] if not args.categories else args.categories
 print(f'Using categories:\n{indented_wrapped_repr(args.categories)}.\n')
 
@@ -185,32 +188,81 @@ users = tuple(str(d['_id']) for d in db.reviews.aggregate(
     allowDiskUse=True,
     batchSize=args.users))
 
-reviews = dict(test_set=dict(), training_set=dict(), descriptions=dict())
-for user in users:
-    i = 0
-    for item in allowed_items:
-        if i >= args.reviews:
+
+def query_consumer():
+    while True:
+        user = query_queue.get()
+        if user is None:
             break
-        d = next(db.reviews.find({'reviewerID': user, 'asin': item},
-                                 projection={'_id': False,
-                                             'asin': True,
-                                             'overall': True},
-                                 limit=1),
-                 None)
-        if d is None:
-            continue
-        data = reviews['test_set'] if i < 10 else reviews['training_set']
-        asin, stars = str(d['asin']), str(int(d['overall']))
+        i = 0
+        for item in allowed_items:
+            if i >= args.reviews:
+                break
+            d = next(db.reviews.find({'reviewerID': user, 'asin': item},
+                                     projection={'_id': False,
+                                                 'asin': True,
+                                                 'overall': True,
+                                                 'reviewerID': True},
+                                     limit=1),
+                     None)
+            if d is not None:
+                review_queue.put(dict(d=d, test_set=i<10))  # review_producer
+                i += 1
+        query_queue.task_done()
+
+
+def review_consumer():
+    while True:
+        obj = review_queue.get()
+        if obj is None:
+            break
+        reviews_lock.acquire()
+        if obj['test_set']:
+            data = reviews['test_set']
+        else:
+            data = reviews['training_set']
+        d = obj['d']
+        asin, stars, user = d['asin'], int(d['overall']), d['reviewerID']
+        asin, stars, user = str(asin), str(stars), str(user)
         if asin not in data:
             data[asin] = dict()
         if stars not in data[asin]:
             data[asin][stars] = list()
         data[asin][stars].append(user)
         items.add(asin)
-        i += 1
+        reviews_lock.release()
+        review_queue.task_done()
 
-print(f'n° items: {len(items): >11}')
+
+reviews_lock, threads = Lock(), list()
+query_queue, review_queue = Queue(), Queue()
+reviews = dict(test_set=dict(), training_set=dict(), descriptions=dict())
+
+for i in range(args.threads):
+    if i < 1:
+        t = Thread(target=review_consumer)
+    else:
+        t = Thread(target=query_consumer)
+    t.start()
+    threads.append(t)
+
+for user in users:
+    query_queue.put(user)
+
+query_queue.join()
+review_queue.join()
+
+for i in range(args.threads):
+    if i < 1:
+        review_queue.put(None)
+    else:
+        query_queue.put(None)
+
+for t in threads:
+    t.join()
+
 print(f'n° users: {len(users): >11}')
+print(f'n° items: {len(items): >11}')
 print(f'n° reviews: {len(users) * args.reviews: >9}')
 
 if args.out is None:
