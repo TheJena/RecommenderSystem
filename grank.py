@@ -21,6 +21,10 @@
 
 from argparse import ArgumentParser, RawTextHelpFormatter
 from networkx import Graph
+from networkx.classes.function import degree
+from numpy.linalg import norm
+from numpy.random import RandomState
+from scipy.sparse import dok_matrix
 import json
 import pickle
 import yaml
@@ -224,6 +228,19 @@ class GRank():
         return self._training_set
 
     @property
+    def alpha(self):
+        """damping factor"""
+        return self._alpha
+
+    @property
+    def transition_matrix(self):
+        """
+           WARNING:
+               the transition matrix has already been multiplied by alpha
+        """
+        return self._transition_matrix
+
+    @property
     def specs(self):
         return '\n'.join(
             ('',
@@ -268,6 +285,17 @@ class GRank():
         self._tpg = TPG(training_set_reviews=self.reviews(training_set=True),
                         test_set_reviews=self.reviews(test_set=True))
 
+        self._alpha = alpha
+
+        t = dok_matrix((self.tpg.number_of_nodes(),
+                        self.tpg.number_of_nodes()),
+                       dtype=float)
+        for a, b in self.tpg.edges:
+            i, j = self.tpg.nodes[a]['id'], self.tpg.nodes[b]['id']
+            t[i, j] = self.alpha / float(degree(self.tpg, a))
+            t[j, i] = self.alpha / float(degree(self.tpg, b))
+        self._transition_matrix = t.tocsr()
+
     def reviews(self, test_set=False, training_set=False):
         """cache and return a tuple of reviews"""
         if test_set and self._test_set_reviews is None:
@@ -296,6 +324,43 @@ class GRank():
                                      'string expected.')
                 for user in reviewers:
                     yield dict(user=str(user), item=str(item), stars=int(stars))
+
+    def personalized_vector(self, user):
+        pv = dok_matrix((self.tpg.number_of_nodes(), 1), dtype=float)
+        pv[self.tpg.nodes[user]['id'], 0] = 1
+        return pv.tocsc()
+
+    def gr(self, item, rank_vector, min_prob=1e-16, max_prob=1):
+        i_d, i_u = self.tpg.nodes[item.d]['id'], self.tpg.nodes[item.u]['id']
+        PPR_id = min(max_prob, max(rank_vector[i_d, 0], min_prob))
+        PPR_iu = min(max_prob, max(rank_vector[i_u, 0], min_prob))
+        return PPR_id / (PPR_id + PPR_iu)
+
+    def top_k_recommendations(self, user, k=10, max_iter=10**3):
+        """return a dict with the top_k recommendations and some statistics"""
+        max_iter = 10**3 if max_iter < 1 else max_iter
+        ret = dict(delta_PPR=list(), k=k, max_iter=max_iter, user=user)
+        PV = self.personalized_vector(user)
+        PPR = RandomState(
+            seed=abs(hash(user)) % 2**32).rand(self.tpg.number_of_nodes(), 1)
+        PPR = PPR / PPR.sum()
+        for it in range(1, max_iter):
+            PPR_before = PPR
+            PPR = self.transition_matrix.dot(PPR) + (1 - self.alpha) * PV
+            delta_PPR = norm(PPR - PPR_before)
+            ret['delta_PPR'].append(delta_PPR)
+            if delta_PPR < 1e-16:
+                ret['iterations'] = it
+                break
+        else:
+            print(f'WARNING: PPR did not converge after {max_iter} iterations;'
+                  ' stop forced')
+            ret['iterations'] = max_iter
+        ret['top_k'] = sorted([(str(i), self.gr(i, PPR))
+                               for i in self.tpg.items],
+                              key=lambda t: t[1],
+                              reverse=True)[:k]
+        return ret
 
 
 if __name__ != '__main__':
