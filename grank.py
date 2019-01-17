@@ -26,31 +26,55 @@ import pickle
 import yaml
 
 
+class Item():
+    """abstract concept of item, with its desirable and undesirable faces"""
+
+    @property
+    def d(self):
+        return self._label + '_d'
+
+    @property
+    def u(self):
+        return self._label + '_u'
+
+    def __init__(self, label):
+        self._label = str(label)
+
+    def __eq__(self, other):
+        return self._label == other._label
+
+    def __hash__(self):
+        return hash(self._label)
+
+    def __str__(self):
+        return self._label
+
 class Preference():
     """desirable item is preferrable over undesirable item"""
 
     @property
-    def d(self):
-        """desirable item"""
+    def desirable(self):
+        """desirable Item"""
         return self._d
 
     @property
-    def u(self):
-        """undesirable item"""
+    def undesirable(self):
+        """undesirable Item"""
         return self._u
 
     def __init__(self, desirable_item, undesirable_item):
-        self._d = str(desirable_item) + '_d'
-        self._u = str(undesirable_item) + '_u'
+        self._d = desirable_item
+        self._u = undesirable_item
 
     def __eq__(self, other):
-        return all((self.d == other.d, self.u == other.u))
+        return all((self.desirable.d == other.desirable.d,
+                    self.undesirable.u == other.undesirable.u))
 
     def __hash__(self):
-        return hash((self.d, self.u))
+        return hash((self.desirable.d, self.undesirable.u))
 
     def __str__(self):
-        return f'{self.d} > {self.u}'
+        return f'{self.desirable.d} > {self.undesirable.u}'
 
 
 class Observation():
@@ -59,10 +83,10 @@ class Observation():
     @property
     def user(self):
         """author of the preference"""
-        return self._u
+        return self._user
 
     def __init__(self, user, preference):
-        self._u = str(user)
+        self._user = str(user)
         self.preference = preference
 
     def __eq__(self, other):
@@ -91,7 +115,7 @@ class TPG(Graph):
 
     @property
     def items(self):
-        """set of items used to generate 3rd layer"""
+        """set of Items used to generate 3rd layer"""
         return self._items
 
     @property
@@ -128,25 +152,26 @@ class TPG(Graph):
         self._items = set()
         for d in training_set_reviews:
             self._users.add(d['user'])
-            self._items.add(d['item'])
+            self._items.add(Item(d['item']))
         for d in test_set_reviews:
             self._users.add(d['user'])
-            self._items.add(d['item'])
+            self._items.add(Item(d['item']))
 
         # create observation set
         comparisons = tuple(
             (S, s) for S in range(5, 1, -1) for s in range(S - 1, 0, -1))
         self._observations = set()
-        for u in self.users:
+        for user in self.users:
             user_reviews = {s: set() for s in range(1, 6)}
-            for d in (d for d in training_set_reviews if d['user'] == u):
+            for d in (d for d in training_set_reviews if d['user'] == user):
                 user_reviews[int(d['stars'])].add(d['item'])
 
             for more_stars, less_stars in comparisons:
-                for d_item in user_reviews[more_stars]:
-                    for u_item in user_reviews[less_stars]:
+                for asin_d in user_reviews[more_stars]:
+                    for asin_u in user_reviews[less_stars]:
                         self._observations.add(
-                            Observation(u, Preference(d_item, u_item)))
+                            Observation(user, Preference(Item(asin_d),
+                                                         Item(asin_u))))
 
         # build graph
         index = 0
@@ -166,19 +191,19 @@ class TPG(Graph):
                 index += 1
 
             if obs.user not in self.nodes():
-                raise ValueError('ERROR: user node '
-                                 f'"{obs.user}" not found in TPG')
+                raise ValueError(
+                    f'ERROR: user node "{obs.user}" not found in TPG')
             self.add_edge(obs.user, str(obs.preference))
 
-            if obs.preference.d not in self.nodes():
-                raise ValueError('ERROR: desirable node '
-                                 f'"{obs.preference.d}" not found in TPG')
-            self.add_edge(str(obs.preference), obs.preference.d)
+            if obs.preference.desirable.d not in self.nodes():
+                raise ValueError(
+                    f'ERROR: desirable node "{obs.preference.desirable.d}"'
+                    ' not found in TPG')
 
-            if obs.preference.u not in self.nodes():
-                raise ValueError('ERROR: undesirable node '
-                                 f'"{obs.preference.u}" not found in TPG')
-            self.add_edge(str(obs.preference), obs.preference.u)
+            if obs.preference.undesirable.u not in self.nodes():
+                raise ValueError(
+                    f'ERROR: undesirable node "{obs.preference.undesirable.u}"'
+                    ' not found in TPG')
 
 
 class GRank():
