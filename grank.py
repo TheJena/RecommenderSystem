@@ -531,6 +531,7 @@ class GRank():
 
         self._alpha = alpha
         self._transition_matrix_1 = None
+        self._recommendation_output = dict()
         self._test_set_reviews = None
         self._training_set_reviews = None
 
@@ -678,7 +679,7 @@ class GRank():
                              ' get better recommendations :)\n')
         return PPR_id / (PPR_id + PPR_iu)
 
-    def top_k_recommendations(self, user):
+    def run_recommendation_algorithm(self, user):
         """return a list of tuples (<str item_id>, <float GR(item)>)"""
         info('\n'.join(('=' * 80,
                         'Started recommendation algorithm:',
@@ -726,7 +727,26 @@ class GRank():
                      key=lambda t: t[1],
                      reverse=True)
         info('\nEnded recommendation algorithm\n' + '=' * 80)
-        return ret
+        self._recommendation_output[user] = ret
+
+    def top_k_recommendations(self, user, k, show=False):
+        """return top k item to recommend to user
+           (if not yet done it also run the recommendation algorithm for the
+            given user)
+        """
+        if user not in self._recommendation_output:
+            # we did not run the recommendation algorithm for this user yet
+            # let us do it right now
+            self.run_recommendation_algorithm(user)
+        ret = self._recommendation_output[user][:k]
+        if show:
+            for i, (item, gr) in enumerate(ret):
+                if i == 0:
+                    info(f'\nRecommended items for target user: {user}')
+                info(f'{i: >2d}) GR(<item {item}>): {gr:.6f}')
+            else:
+                info()
+        return tuple(((item, float(gr_item)) for item, gr_item in ret))
 
 
 if __name__ != '__main__':
@@ -777,6 +797,11 @@ parser.add_argument(help='See the above input file specs.',
                     dest='input',
                     metavar='input_file',
                     type=open)
+parser.add_argument('-k', '--top-k',
+                    action='append',
+                    dest='top_k',
+                    help='compute also NDCG@k',
+                    metavar='int')
 parser.add_argument('-i', '--max-iter',
                     default=20,
                     help='stop convergence after max-iter iterations '
@@ -798,8 +823,21 @@ args = parser.parse_args()  # parse command line arguments
 
 args.threads = 1 if args.threads < 1 else args.threads  # force n° threads >= 1
 args.max_iter = 1 if args.max_iter < 1 else args.max_iter  # force max_iter >= 1
+try:
+    # ensure all the k are positive integers sorted by decreasing values
+    args.top_k = [10] if not args.top_k else [int(k) for k in args.top_k]
+    args.top_k = sorted(set([k for k in args.top_k if k > 0]), reverse=True)
+except ValueError as e:
+    if 'invalid literal for int' in str(e):
+        raise SystemExit('ERROR: -k/--top-k only takes input values')
+    raise SystemExit(f'ERROR: {str(e)}')
 
 grank = GRank(args.input)
 info(grank.dataset_specs)
 info(grank.tpg.specs)
 info(grank.specs)
+
+for i, target_user in enumerate(grank.tpg.users):
+    for j, k in enumerate(args.top_k):
+        top_k_recommendations = grank.top_k_recommendations(target_user, k,
+                                                            show=bool(j == 0))
