@@ -131,10 +131,42 @@ class Observation():
 class TPG(Graph):
     """tripartite graph"""
 
+    comparisons = tuple(
+        (S, s) for S in range(5, 1, -1) for s in range(S - 1, 0, -1))
+
+    @property
+    def specs(self):
+        both = ' (both training and test set)'
+        train = ' (only training          set)'
+        return '\n'.join((
+            f'',
+            f'Tripartite Graph specs:',
+            f'n° edges: {self.number_of_edges(): >21}',
+            f'n° nodes: {self.number_of_nodes(): >21}',
+            f'├── user layer: {self.M: >15}{both}',
+            f'├── preference layer: {self.N * (self.N - 1): >9}{train}',
+            f'│   (of which only {len(self.preferences): >12}',
+            f'│    linked to users)',
+            f'│',
+            f'└── (un)desirable layer: {2 * self.N: >6}{both}',
+        ))
+
     @property
     def users(self):
         """set of users corresponding to nodes in 1st layer"""
         return self._users
+
+    @property
+    def M(self):
+        """number of users (nodes in 1st layer)"""
+        return self._m
+
+    @property
+    def observations(self):
+        """set of Observations, each one corresponds to a link between
+           1st and 2nd layer
+        """
+        return self._observations
 
     @property
     def preferences(self):
@@ -147,23 +179,9 @@ class TPG(Graph):
         return self._items
 
     @property
-    def observations(self):
-        """set of observ. corresponding to links between 1st and 2nd layer"""
-        return self._observations
-
-    @property
-    def specs(self):
-        return '\n'.join(('',
-                          'Tripartite Graph specs:',
-                          f'n° edges: {self.number_of_edges(): >21}',
-                          f'n° nodes: {self.number_of_nodes(): >21}',
-                          f'├── user layer: {len(self.users): >15}'
-                          ' (both training and test set)',
-                          f'├── preference layer: {len(self.preferences): >9}'
-                          ' (only training          set)',
-                          f'└── (un)desirable layer: {2 * len(self.items): >6}'
-                          ' (both training and test set)',
-                          ))
+    def N(self):
+        """number of items (half of the nodes in 3rd layer)"""
+        return self._n
 
     def __init__(self, **kwargs):
         # ensure both training set and test set kwargs were explicitly set
@@ -187,8 +205,10 @@ class TPG(Graph):
             self._items.add(Item(d['item']))
 
         # create observation set
-        comparisons = tuple(
-            (S, s) for S in range(5, 1, -1) for s in range(S - 1, 0, -1))
+        # initialize properties which return n° items and n° users
+        self._n = len(self.items)
+        self._m = len(self.users)
+
         self._observations = set()
         for user in self.users:
             # create a dictionary with a key for each n° stars
@@ -200,12 +220,11 @@ class TPG(Graph):
             # iterate over comparisons between items with more stars against
             # those with less stars (i.e. items with 5 stars vs items with 4,
             # ... 5 stars vs 1 star, 4 stars vs 3 stars, ..., 2 stars vs 1)
-            for more_stars, less_stars in comparisons:
+            for more_stars, less_stars in self.comparisons:
                 for asin_d in user_reviews[more_stars]:
                     for asin_u in user_reviews[less_stars]:
-                        self._observations.add(
-                            Observation(user, Preference(Item(asin_d),
-                                                         Item(asin_u))))
+                        preference = Preference(Item(asin_d), Item(asin_u))
+                        self._observations.add(Observation(user, preference))
 
         # build graph
         index = 0
@@ -245,9 +264,10 @@ class GRank():
     allowed_input_formats = ('json', 'pickle', 'yaml')
 
     @property
-    def tpg(self):
-        """tripartite graph"""
-        return self._tpg
+    def specs(self):
+        return '\n'.join(('',
+                          'GRank specs:',
+                          ''))
 
     @property
     def test_set(self):
@@ -269,6 +289,19 @@ class GRank():
         return self._descriptions
 
     @property
+    def dataset_specs(self):
+        both = ' (both training and test set)'
+        train = ' (only training          set)'
+        return '\n'.join((
+            f'',
+            f'Dataset specs:',
+            f'n° users: {len(self.tpg.users): >21}{both}',
+            f'n° items: {len(self.tpg.items):21}{both}',
+            f'n° reviews: {len(self.reviews(training_set=True)): >19}{train}',
+            f'n° observations: {len(self.tpg.observations): >14}{train}'
+        ))
+
+    @property
     def tpg(self):
         """tripartite graph"""
         return self._tpg
@@ -286,19 +319,6 @@ class GRank():
         """
         return self._transition_matrix
 
-    @property
-    def specs(self):
-        return '\n'.join(
-            ('',
-             'Dataset specs:',
-             f'n° users: {len(self.tpg.users): >21}'
-             ' (both training and test set)',
-             f'n° items: {len(self.tpg.items):21}'
-             ' (both training and test set)',
-             f'n° reviews: {len(self.reviews(training_set=True)): >19}'
-             ' (only training          set)',
-             f'n° observations: {len(self.tpg.observations): >14}'
-             ' (only training          set)'))
 
     def __init__(self, file_object, alpha=0.85):
         # check that input file format is allowed, then load its data
@@ -480,5 +500,6 @@ parser.add_argument(help='See the above input file specs.',
                     type=open)
 args = parser.parse_args()  # parse command line arguments
 grank = GRank(args.input)
-print(grank.specs)
-print(grank.tpg.specs)
+info(grank.dataset_specs)
+info(grank.tpg.specs)
+info(grank.specs)
