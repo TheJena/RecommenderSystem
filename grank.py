@@ -873,6 +873,12 @@ parser.add_argument(help='See the above input file specs.',
                     dest='input',
                     metavar='input_file',
                     type=open)
+parser.add_argument('-s', '--stop-after',
+                    default=None,
+                    help='stop script after doing recommendations for a '
+                    'certain number of users',
+                    metavar='int',
+                    type=int)
 parser.add_argument('-k', '--top-k',
                     action='append',
                     dest='top_k',
@@ -901,6 +907,9 @@ parser.add_argument('-j', '--threads',
                     type=int)
 args = parser.parse_args()  # parse command line arguments
 
+if args.stop_after is not None and args.stop_after < 1:
+    raise SystemExit('ERROR: -s/--stop-after must be greater than one')
+
 args.threads = 1 if args.threads < 1 else args.threads  # force n° threads >= 1
 args.max_iter = 1 if args.max_iter < 1 else args.max_iter  # force max_iter >= 1
 try:
@@ -917,7 +926,11 @@ info(grank.dataset_specs)
 info(grank.tpg.specs)
 info(grank.specs)
 
+processed_users = 0
 for i, target_user in enumerate(grank.tpg.users):
+    if args.stop_after is not None and processed_users >= args.stop_after:
+        break
+    processed_users += 1
     for j, k in enumerate(args.top_k):
         top_k_recommendations = grank.top_k_recommendations(target_user, k,
                                                             show=bool(j == 0))
