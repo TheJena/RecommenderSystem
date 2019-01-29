@@ -19,7 +19,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from argparse import ArgumentParser, FileType, RawDescriptionHelpFormatter
 from math import log2
 from numpy import mean, zeros
 from numpy.linalg import norm
@@ -27,7 +27,7 @@ from numpy.random import RandomState
 from queue import Queue
 from scipy.sparse import dok_matrix
 from signal import pthread_kill, signal, SIGINT, SIGTERM, SIGKILL
-from sys import float_info, getsizeof, stderr
+from sys import float_info, getsizeof, stderr, stdout
 from threading import Thread, Lock, current_thread, main_thread
 import json
 import pickle
@@ -828,6 +828,14 @@ class GRank():
 if __name__ != '__main__':
     raise SystemExit('Please run this script, do not import it!')
 
+try:
+    # use the Dumper from the compiled C library (if present)
+    # because it is faster than the one for the python iterpreter
+    yaml_dumper = yaml.CDumper
+except AttributeError:
+    yaml_dumper = yaml.Dumper  # fallback interpreted and slower Dumper
+yaml_kwargs = dict(Dumper=yaml_dumper, default_flow_style=False)
+
 # global variables mainly used for multithreading
 global queues, result, result_lock, threads
 queues, result, result_lock, threads = None, None, Lock(), list()
@@ -879,6 +887,11 @@ parser.add_argument('-s', '--stop-after',
                     'certain number of users',
                     metavar='int',
                     type=int)
+parser.add_argument('-o', '--output',
+                    default=None,
+                    help='print script results on output file',
+                    metavar='output_file',
+                    type=FileType('w'))
 parser.add_argument('-k', '--top-k',
                     action='append',
                     dest='top_k',
@@ -935,3 +948,34 @@ for i, target_user in enumerate(grank.tpg.users):
         top_k_recommendations = grank.top_k_recommendations(target_user, k,
                                                             show=bool(j == 0))
         ndcg = grank.ndcg(target_user, k, show=True)
+        if args.output is not None:
+            output = ''
+            if i == 0:
+                header = ' Command Line Arguments '
+                h_len = (80 - len(header)) // 2
+                output += f'{"#" * h_len}{header}{"#" * h_len}\n'
+            output += yaml.dump({
+                'args.group_size': args.group_size,
+                'args.input': args.input.name,
+                'args.max_iter': args.max_iter,
+                'args.member': args.member,
+                'args.only_new': args.only_new,
+                'args.output': args.output.name,
+                'args.stop_after': args.stop_after,
+                'args.threads': args.threads,
+                'args.threshold': args.threshold,
+                'args.top_k': args.top_k,
+                'k': k,
+                'ndcg@k': ndcg,
+                'target_user': target_user,
+                'top_k_recommendations': top_k_recommendations
+            }, **yaml_kwargs)
+            output += '#' * 80 + '\n'
+            if args.output == stdout:
+                print(output, end='')
+            else:
+                # create a file descriptor for the output file
+                output_file = open(args.output.name, 'a')
+                output_file.write(output)
+                output_file.flush()
+                output_file.close()
