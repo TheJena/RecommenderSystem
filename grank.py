@@ -19,15 +19,30 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from argparse import ArgumentParser, RawTextHelpFormatter
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from networkx import Graph
 from networkx.classes.function import degree
 from numpy.linalg import norm
 from numpy.random import RandomState
 from scipy.sparse import dok_matrix
+from signal import signal, SIGINT
+from sys import float_info, stderr
+from threading import current_thread, main_thread
 import json
 import pickle
 import yaml
+
+
+def info(message='', *args, **kwargs):
+    print(message, *args, **kwargs, file=stderr)
+
+
+def sigint_handler(sig_num, stack_frame):
+    """Cleanily catch SIGINT and exit without printing long stack traces"""
+    if sig_num != SIGINT.value:
+        return
+    info(f'\n\nReceived SIGINT (Ctrl + C)')
+    raise SystemExit()
 
 
 class Item():
@@ -35,10 +50,12 @@ class Item():
 
     @property
     def d(self):
+        """desirable item face"""
         return self._label + '_d'
 
     @property
     def u(self):
+        """undesirable item face"""
         return self._label + '_u'
 
     def __init__(self, label):
@@ -47,11 +64,18 @@ class Item():
     def __eq__(self, other):
         return self._label == other._label
 
+    def __le__(self, other):
+        return self._label <= other._label
+
+    def __lt__(self, other):
+        return self._label < other._label
+
     def __hash__(self):
         return hash(self._label)
 
     def __str__(self):
         return self._label
+
 
 class Preference():
     """desirable item is preferrable over undesirable item"""
@@ -142,6 +166,7 @@ class TPG(Graph):
                           ))
 
     def __init__(self, **kwargs):
+        # ensure both training set and test set kwargs were explicitly set
         if any(('test_set_reviews' not in kwargs,
                 'training_set_reviews' not in kwargs)):
             raise ValueError('ERROR: please set both training_set_reviews and '
@@ -166,10 +191,15 @@ class TPG(Graph):
             (S, s) for S in range(5, 1, -1) for s in range(S - 1, 0, -1))
         self._observations = set()
         for user in self.users:
+            # create a dictionary with a key for each n° stars
             user_reviews = {s: set() for s in range(1, 6)}
             for d in (d for d in training_set_reviews if d['user'] == user):
+                # add any reviewed item to the corresponding n° stars key
                 user_reviews[int(d['stars'])].add(d['item'])
 
+            # iterate over comparisons between items with more stars against
+            # those with less stars (i.e. items with 5 stars vs items with 4,
+            # ... 5 stars vs 1 star, 4 stars vs 3 stars, ..., 2 stars vs 1)
             for more_stars, less_stars in comparisons:
                 for asin_d in user_reviews[more_stars]:
                     for asin_u in user_reviews[less_stars]:
@@ -221,11 +251,27 @@ class GRank():
 
     @property
     def test_set(self):
+        """dictionary of <str item_id>: {<str n° star>: [<str user_id>, ...],
+                                          ... }
+        """
         return self._test_set
 
     @property
     def training_set(self):
+        """dictionary of <str item_id>: {<str n° star>: [<str user_id>, ...],
+                                          ... }
+        """
         return self._training_set
+
+    @property
+    def descriptions(self):
+        """dictionary of <str item_id>: <str item description>"""
+        return self._descriptions
+
+    @property
+    def tpg(self):
+        """tripartite graph"""
+        return self._tpg
 
     @property
     def alpha(self):
@@ -255,6 +301,7 @@ class GRank():
              ' (only training          set)'))
 
     def __init__(self, file_object, alpha=0.85):
+        # check that input file format is allowed, then load its data
         extension = file_object.name.split('.')[-1]
         if extension not in self.allowed_input_formats:
             raise SystemExit('ERROR: input file format not supported, please '
@@ -266,22 +313,23 @@ class GRank():
             data = pickle.load(open(file_object.name, 'rb'))
         elif extension == 'yaml':
             try:
-                loader = yaml.CLoader
+                loader = yaml.CLoader  # faster compiled Loader
             except AttributeError:
-                loader = yaml.Loader
+                loader = yaml.Loader  # fallback, slower interpreted Loader
             data = yaml.load(file_object, Loader=loader)
         try:
             self._test_set = data['test_set']
             self._training_set = data['training_set']
             self._descriptions = data['descriptions']
         except KeyError as e:
-            print(f'ERROR: {str(e)}')
+            raise SystemExit(f'ERROR: {str(e)}')
         else:
-            print(f'Successfully loaded dataset from {file_object.name}')
+            info(f'Successfully loaded dataset from {file_object.name}')
 
         self._test_set_reviews = None
         self._training_set_reviews = None
 
+        # build a tripartite graph from the loaded dataset
         self._tpg = TPG(training_set_reviews=self.reviews(training_set=True),
                         test_set_reviews=self.reviews(test_set=True))
 
@@ -297,7 +345,9 @@ class GRank():
         self._transition_matrix = t.tocsr()
 
     def reviews(self, test_set=False, training_set=False):
-        """cache and return a tuple of reviews"""
+        """cache and return a tuple of reviews; a review is a dict like:
+           {'user': <str user_id>, 'item': <str item_id>, 'stars': <int stars>}
+        """
         if test_set and self._test_set_reviews is None:
             self._test_set_reviews = tuple(self._reviews(test_set=True))
         elif training_set and self._training_set_reviews is None:
@@ -310,7 +360,9 @@ class GRank():
         raise ValueError('ERROR: please set test_set or training_set flag')
 
     def _reviews(self, test_set=False, training_set=False):
-        """private reviews generator"""
+        """private reviews generator; a review is a dict like:
+           {'user': <str user_id>, 'item': <str item_id>, 'stars': <int stars>}
+        """
         if test_set:
             data = self.test_set
         elif training_set:
@@ -326,14 +378,28 @@ class GRank():
                     yield dict(user=str(user), item=str(item), stars=int(stars))
 
     def personalized_vector(self, user):
+        """return an empty vector with only a one in the cell corresponding to
+           the user (since it is sparse, let us save memory with a Compressed
+           Sparse Column format)
+        """
         pv = dok_matrix((self.tpg.number_of_nodes(), 1), dtype=float)
         pv[self.tpg.nodes[user]['id'], 0] = 1
         return pv.tocsc()
 
-    def gr(self, item, rank_vector, min_prob=1e-16, max_prob=1):
+    def gr(self, item, rank_vector, min_prob=float_info.min, max_prob=1):
+        """return the GRank score given to item by Personalized Page Rank"""
         i_d, i_u = self.tpg.nodes[item.d]['id'], self.tpg.nodes[item.u]['id']
+        # probability that random walker pass from desirable item face
         PPR_id = min(max_prob, max(rank_vector[i_d, 0], min_prob))
+        # probability that random walker pass from undesirable item face
         PPR_iu = min(max_prob, max(rank_vector[i_u, 0], min_prob))
+        if any((PPR_id < min_prob, PPR_id > max_prob,
+                PPR_iu < min_prob, PPR_iu > max_prob)):
+            # since these are probabilities they should be in (0, 1]
+            raise SystemExit(f'\nWARNING: GR({item}) is either 0, 1 or NaN;'
+                             ' which are all values not allowed!\n\nPlease'
+                             ' reduce the convergence threshold in order to'
+                             ' get better recommendations :)\n')
         return PPR_id / (PPR_id + PPR_iu)
 
     def top_k_recommendations(self, user, k=10, max_iter=10**3):
@@ -343,12 +409,17 @@ class GRank():
         PV = self.personalized_vector(user)
         PPR = RandomState(
             seed=abs(hash(user)) % 2**32).rand(self.tpg.number_of_nodes(), 1)
-        PPR = PPR / PPR.sum()
+        PPR = PPR / PPR.sum()  # normalize PPR
         for it in range(1, max_iter):
+            info(f'\nIteration: {it: >42}')
             PPR_before = PPR
             PPR = self.transition_matrix.dot(PPR) + (1 - self.alpha) * PV
+            # compute the difference between two iterations
             delta_PPR = norm(PPR - PPR_before)
             ret['delta_PPR'].append(delta_PPR)
+            info(f'{" " * 13}norm(PPR(t) - PPR(t-1)):{" " * 15}{delta_PPR:g}')
+            # and stop convergence if the norm of the difference is lower than
+            # the given threshold
             if delta_PPR < 1e-16:
                 ret['iterations'] = it
                 break
@@ -366,36 +437,48 @@ class GRank():
 if __name__ != '__main__':
     raise SystemExit('Please run this script, do not import it!')
 
-parser = ArgumentParser(description='Apply the collaborative-ranking approach '
-                        'called GRank to a dataset of Amazon reviews.',
-                        formatter_class=RawTextHelpFormatter)
-parser.add_argument(help='load dataset from: '
-                    f'.{", .".join(GRank.allowed_input_formats)} file.\n'
-                    'It should contain a dictionary like:\n'
-                    '\t{"test_set": {\n'
-                    '\t\t"<asin>": {"5": <list of reviewerID>,\n'
-                    '\t\t           "4": <list of reviewerID>,\n'
-                    '\t\t           "3": <list of reviewerID>,\n'
-                    '\t\t           "2": <list of reviewerID>,\n'
-                    '\t\t           "1": <list of reviewerID>},\n'
-                    '\t\t  ...\n'
-                    '\t\t},\n'
-                    '\t"training_set": {\n'
-                    '\t\t"<asin>": {"5": <list of reviewerID>,\n'
-                    '\t\t           "4": <list of reviewerID>,\n'
-                    '\t\t           "3": <list of reviewerID>,\n'
-                    '\t\t           "2": <list of reviewerID>,\n'
-                    '\t\t           "1": <list of reviewerID>},\n'
-                    '\t\t  ...\n'
-                    '\t\t},\n'
-                    '\t"descriptions": {"<asin>": "description of the item",\n'
-                    '\t                   ...      ...\n'
-                    '\t\t}\n'
-                    '\t}',
+# bind signal handler to Ctrl + C signal in order to avoid awful stack traces
+# if user stops the script
+if current_thread() == main_thread():
+    signal(SIGINT, sigint_handler)
+
+# build command line argument parser
+parser = ArgumentParser(
+    description='\n\t'.join((
+        '',
+        'Apply the collaborative-ranking approach called GRank to a dataset ',
+        'of Amazon reviews.',
+        '',
+        'Input file should be in one of the following supported formats:',
+        f'\t.{", .".join(GRank.allowed_input_formats)} file.',
+        '',
+        'And it should contain a dictionary like:',
+        '\t{"test_set": {\n',
+        '\t\t"<asin>": {"5": <list of reviewerID>,',
+        '\t\t           "4": <list of reviewerID>,',
+        '\t\t           "3": <list of reviewerID>,',
+        '\t\t           "2": <list of reviewerID>,',
+        '\t\t           "1": <list of reviewerID>},',
+        '\t\t  ...',
+        '\t\t},',
+        '\t"training_set": {',
+        '\t\t"<asin>": {"5": <list of reviewerID>,',
+        '\t\t           "4": <list of reviewerID>,',
+        '\t\t           "3": <list of reviewerID>,',
+        '\t\t           "2": <list of reviewerID>,',
+        '\t\t           "1": <list of reviewerID>},',
+        '\t\t  ...',
+        '\t\t},',
+        '\t"descriptions": {"<asin>": "description of the item",',
+        '\t                   ...      ...',
+        '\t\t}',
+        '\t}')),
+    formatter_class=RawDescriptionHelpFormatter)
+parser.add_argument(help='See the above input file specs.',
                     dest='input',
                     metavar='input_file',
                     type=open)
-args = parser.parse_args()
+args = parser.parse_args()  # parse command line arguments
 grank = GRank(args.input)
 print(grank.specs)
 print(grank.tpg.specs)
