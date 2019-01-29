@@ -20,7 +20,8 @@
 """
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from numpy import zeros
+from math import log2
+from numpy import mean, zeros
 from numpy.linalg import norm
 from numpy.random import RandomState
 from queue import Queue
@@ -748,6 +749,53 @@ class GRank():
                 info()
         return tuple(((item, float(gr_item)) for item, gr_item in ret))
 
+    def ndcg(self, user, k, show=False):
+        """please look normalized_discounted_cumulative_gain docstring"""
+        return self.normalized_discounted_cumulative_gain(user, k, show=show)
+
+    def normalized_discounted_cumulative_gain(self, user, k, show=False):
+        """compute accuracy of top k recommended items for the given user"""
+
+        # this is a list of tuples like: (<str item_id>, <float GR(item_id)>)
+        recommended_item_list = self.top_k_recommendations(user, k)
+
+        # extract from training set and test set
+        # the ratings the user gave to recommended items
+        rating = dict()
+        for item, gr_score in recommended_item_list:
+            try:
+                for source in (self.test_set, self.training_set):
+                    if item not in source:
+                        continue
+                    for star, users in source[item].items():
+                        if user in users:
+                            rating[item] = int(star)
+                            # let us use an exception to exit the two for loops
+                            raise Exception('item rating found')
+            except Exception as e:
+                if str(e) == 'item rating found':
+                    continue  # let us look for the next item rating
+                raise e  # propagate exceptions not intended to exit the loops
+            else:
+                # if user did not rate that item we estimate a probable
+                # rating with the mean of the other ratings this user did
+                rating[item] = mean(
+                    [int(star)
+                     for source in (self.test_set, self.training_set)
+                     for item, d in source.items()
+                     for star, users in d.items()
+                     if user in users])
+        discounted_cumulative_gain = sum(
+            (pow(2, rating[item]) - 1) / log2(i + 2)  # because i starts from 0
+            for i, (item, _) in enumerate(recommended_item_list))
+        ideal_discounted_cumulative_gain = sum(
+            (pow(2, 5) - 1) / log2(i + 2)  # because i starts from 0
+            for i, (item, _) in enumerate(recommended_item_list))
+        ret = discounted_cumulative_gain / ideal_discounted_cumulative_gain
+        if show:
+            info(f'NDCK@{k}: {ret}')
+        return float(ret)
+
 
 if __name__ != '__main__':
     raise SystemExit('Please run this script, do not import it!')
@@ -841,3 +889,4 @@ for i, target_user in enumerate(grank.tpg.users):
     for j, k in enumerate(args.top_k):
         top_k_recommendations = grank.top_k_recommendations(target_user, k,
                                                             show=bool(j == 0))
+        ndcg = grank.ndcg(target_user, k, show=True)
