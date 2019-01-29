@@ -20,14 +20,14 @@
 """
 
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from networkx import Graph
-from networkx.classes.function import degree
+from numpy import zeros
 from numpy.linalg import norm
 from numpy.random import RandomState
+from queue import Queue
 from scipy.sparse import dok_matrix
-from signal import signal, SIGINT
-from sys import float_info, stderr
-from threading import current_thread, main_thread
+from signal import pthread_kill, signal, SIGINT, SIGTERM, SIGKILL
+from sys import float_info, getsizeof, stderr
+from threading import Thread, Lock, current_thread, main_thread
 import json
 import pickle
 import yaml
@@ -42,7 +42,54 @@ def sigint_handler(sig_num, stack_frame):
     if sig_num != SIGINT.value:
         return
     info(f'\n\nReceived SIGINT (Ctrl + C)')
+    for sig in (SIGTERM, SIGKILL):
+        info(f'Sending {sig.name} to all threads')
+        for t in threads:
+            if isinstance(t, Thread) and t.ident is not None:
+                pthread_kill(t.ident, sig)
     raise SystemExit()
+
+
+def worker(ppr_vector, alpha, N):
+    """this function is the body of threads spawned during the execution of
+       the matrix-vector product (alpha * T2 * PPR).
+
+       Each thread has its queue from which it takes (one by one) the workloads
+       it has to process. A workload is a tuple like:
+           (preference_index, desirable_item_index, undesirable_item_index)
+       which represents the indexes of three nodes of the graph (a preference
+       from 2nd layer and its two respective and linked desirable/undesirable
+       nodes from 3rd layer).  Betweeen theese three nodes there are two
+       undirect edges which are mapped to two different rows of the transition
+       matrix and the two respective transposed different columns (because the
+       graph is undirect).  With this piece of information (2 rows and 2
+       columns) it is possible to execute several independent row-vs-col
+       matrix-vector products on parallel.
+    """
+    global queues, result, result_lock  # global variables for multithreading
+    t_id = int(current_thread().name)  # id of this thread
+    # local variable with the sum of all the results this thread computed
+    local_vector = zeros(ppr_vector.shape)
+    # values of T2 non zero cells in ...
+    pref_value = float(alpha) / 2.0  # ... block 2
+    item_value = float(alpha) / float(N - 1)  # ... block 6
+    while True:
+        # get a workload from the main thread through a queue
+        pref_index, item_d_index, item_u_index = queues[t_id].get()
+        if pref_index is None or item_d_index is None or item_u_index is None:
+            # that workload tell us that there is nothing more to do,
+            # let us sum our local results with the global ones
+            result_lock.acquire()
+            result += local_vector
+            result_lock.release()
+            break
+        # compute the three row-vs-col matrix-vector products corresponding to
+        # the workload
+        local_vector[pref_index] += pref_value * \
+            (ppr_vector[item_d_index, 0] + ppr_vector[item_u_index, 0])
+        local_vector[item_d_index] += item_value * ppr_vector[pref_index, 0]
+        local_vector[item_u_index] += item_value * ppr_vector[pref_index, 0]
+        queues[t_id].task_done()  # tell the queue we executed this workload
 
 
 class Item():
@@ -128,7 +175,7 @@ class Observation():
         return f'{self.user} ~> ({self.preference})'
 
 
-class TPG(Graph):
+class TPG():
     """tripartite graph"""
 
     comparisons = tuple(
@@ -141,8 +188,8 @@ class TPG(Graph):
         return '\n'.join((
             f'',
             f'Tripartite Graph specs:',
-            f'n° edges: {self.number_of_edges(): >21}',
-            f'n° nodes: {self.number_of_nodes(): >21}',
+            f'n° edges: {self.number_of_edges: >21}',
+            f'n° nodes: {self.number_of_nodes: >21}',
             f'├── user layer: {self.M: >15}{both}',
             f'├── preference layer: {self.N * (self.N - 1): >9}{train}',
             f'│   (of which only {len(self.preferences): >12}',
@@ -153,7 +200,9 @@ class TPG(Graph):
 
     @property
     def users(self):
-        """set of users corresponding to nodes in 1st layer"""
+        """dictionary of <str user_id>: <int user_degree>
+           each user_id corresponds to a node in 1st layer
+        """
         return self._users
 
     @property
@@ -170,18 +219,60 @@ class TPG(Graph):
 
     @property
     def preferences(self):
-        """set of preferences corresponding to nodes in 2nd layer"""
-        return set(o.preference for o in self.observations)
+        """dictionary of <Preference pref_obj>: <int preference_degree>
+           each pref_obj corresponds to a node in 2nd layer"""
+        return self._preferences
+
+    @property
+    def missing_preferences(self):
+        """
+           generate tuples like (Preference, <int index>)
+           which corresponds to Preferences nodes in 2nd layer
+           which were not chosen by any user
+        """
+        index = self.M + len(self.preferences)
+        for desirable_item in self.items:
+            for undesirable_item in self.items:
+                if desirable_item != undesirable_item:
+                    preference = Preference(desirable_item, undesirable_item)
+                    # ensure this preference has not yet been considered in
+                    # self.preferences
+                    # (aka those one linked to at least a user)
+                    if preference not in self.preferences.keys():
+                        yield (preference, index)
+                        index += 1
+
+    @property
+    def number_of_missing_preferences(self):
+        """number of nodes in 2nd layer which are not linked
+           to any node in the 1st layser
+        """
+        return self.N * (self.N - 1) - len(self.preferences)
 
     @property
     def items(self):
-        """set of Items used to generate 3rd layer"""
+        """set of Item, for each one of these two nodes are generated in 3rd
+           layer (one for the item desirable face and one for the undesirable
+           one)
+        """
         return self._items
 
     @property
     def N(self):
         """number of items (half of the nodes in 3rd layer)"""
         return self._n
+
+    @property
+    def number_of_nodes(self):
+        """number of nodes in 1st, 2nd and 3rd layer"""
+        return self.M + self.N * (self.N - 1) + 2 * self.N
+
+    @property
+    def number_of_edges(self):
+        """number of edges between 1st and 2nd layer
+           and between 2nd and 3rd one
+        """
+        return len(self.observations) + 2 * self.N * (self.N - 1)
 
     def __init__(self, **kwargs):
         # ensure both training set and test set kwargs were explicitly set
@@ -192,23 +283,29 @@ class TPG(Graph):
 
         training_set_reviews = kwargs['training_set_reviews']
         test_set_reviews = kwargs['test_set_reviews']
-        super().__init__()
 
-        # create user and item sets
-        self._users = set()
+        # create users nodes (with a null degree) and populate items set
         self._items = set()
+        self._users = dict()
         for d in training_set_reviews:
-            self._users.add(d['user'])
+            self._users[d['user']] = dict(degree=0)
             self._items.add(Item(d['item']))
         for d in test_set_reviews:
-            self._users.add(d['user'])
+            self._users[d['user']] = dict(degree=0)
             self._items.add(Item(d['item']))
-
-        # create observation set
+        self._items = tuple(sorted(self._items))
         # initialize properties which return n° items and n° users
         self._n = len(self.items)
         self._m = len(self.users)
 
+        # create preferences nodes, and populate observation set (which
+        # corresponds to the edges between 1st and 2nd layer)
+        # warning: only preferences explicitly chosen by at least a user are
+        #          considered here; those linked only with the 3rd layer will
+        #          be generated next (because they are too many to stay in ram)
+        # user or preference node degree are also updated any time a new edge,
+        # starting/ending from/to it, is hit
+        self._preferences = dict()
         self._observations = set()
         for user in self.users:
             # create a dictionary with a key for each n° stars
@@ -225,38 +322,36 @@ class TPG(Graph):
                     for asin_u in user_reviews[less_stars]:
                         preference = Preference(Item(asin_d), Item(asin_u))
                         self._observations.add(Observation(user, preference))
+                        if preference not in self.preferences:
+                            self._preferences[preference] = dict(degree=3)
+                            self._users[user]['degree'] += 1
+                        else:
+                            self._preferences[preference]['degree'] += 1
+                            self._users[user]['degree'] += 1
 
-        # build graph
+        # assign indexes to graph nodes stored in memory
+        # (those which would not fit into ram will be generated
+        # with their corresponding indexes)
         index = 0
-        for user in self.users:
-            self.add_node(user, id=index, type='user')
+        for user, data in self.users.items():
+            data['index'] = index
+            index += 1
+        for preference, data in self.preferences.items():
+            data['index'] = index
             index += 1
 
-        for item in self.items:
-            self.add_node(f'{item}_d', id=index, type='desirable')
-            index += 1
-            self.add_node(f'{item}_u', id=index, type='undesirable')
-            index += 1
+    def missing_desirable_item_index(self, item):
+        """return index of desirable items"""
+        if getattr(self, '_missing_desirables', None) is None:
+            self._missing_desirables = dict()
+            for index, item in enumerate(self.items):
+                self._missing_desirables[item] = \
+                    index + self.M + self.N * (self.N - 1)
+        return self._missing_desirables[item]
 
-        for obs in self.observations:
-            if str(obs.preference) not in self.nodes():
-                self.add_node(str(obs.preference), id=index, type='preference')
-                index += 1
-
-            if obs.user not in self.nodes():
-                raise ValueError(
-                    f'ERROR: user node "{obs.user}" not found in TPG')
-            self.add_edge(obs.user, str(obs.preference))
-
-            if obs.preference.desirable.d not in self.nodes():
-                raise ValueError(
-                    f'ERROR: desirable node "{obs.preference.desirable.d}"'
-                    ' not found in TPG')
-
-            if obs.preference.undesirable.u not in self.nodes():
-                raise ValueError(
-                    f'ERROR: undesirable node "{obs.preference.undesirable.u}"'
-                    ' not found in TPG')
+    def missing_undesirable_item_index(self, item):
+        """return index of undesirable items"""
+        return self.missing_desirable_item_index(item) + self.N
 
 
 class GRank():
@@ -267,6 +362,9 @@ class GRank():
     def specs(self):
         return '\n'.join(('',
                           'GRank specs:',
+                          f'max iterations: {args.max_iter: >7d}',
+                          f'threshold:{" " * 12}{args.threshold:g}',
+                          f'alpha: {self.alpha: >19.2f}',
                           ''))
 
     @property
@@ -312,13 +410,98 @@ class GRank():
         return self._alpha
 
     @property
-    def transition_matrix(self):
-        """
-           WARNING:
-               the transition matrix has already been multiplied by alpha
-        """
-        return self._transition_matrix
+    def transition_matrix_1(self):
+        """transition matrix could be partitioned in the following blocks:
 
+           users .  preferences  . items x2
+                 |  1  |         |          <~ users
+            -----+-----+---------+-----
+              2  |     |         |  3       <~
+            -----+-----+---------+-----     <~
+                 |     |         |          <~ preferences
+                 |     |         |  4       <~
+                 |     |         |          <~
+            -----+-----+---------+-----
+                 |  5  |    6    |          <~ items x2
+
+            This property memorizes the above transition matrix without values
+            that would be in blocks 4 and 6.  In fact these two blocks sparsity
+            together with their size make them impossible to fit in ram.
+            Fortunately they are reproducible with a python generator because
+            their structure is regular enough; in fact:
+            - each row of block 4 has two non zero cells, which are distant N
+            - each col of block 4 has N - 1 non zero cells
+            - the mask of the block 4 is the transposed of the mask of block 6
+            - block 4 can be represented by: 1/2 * mask(<block 4>)
+            - block 6 can be represented by: 1/(N - 1) * mask(<block 6>)
+
+            In order to do less multiplications afterwards the matris elements
+            are already moltiplied by alpha; thus:
+
+            cell[i, j] = alpha / degree(node i)
+        """
+        if getattr(self, '_transition_matrix_1', None) is None:
+            info(f'Building sparse transition matrix T:{" " * 21}',
+                 end='', flush=True)
+            # to build this sparse matrix the usage of a Dictionary Of Keys
+            # based one is really handy
+            t1 = dok_matrix(
+                (self.tpg.number_of_nodes, self.tpg.number_of_nodes))
+            total = len(self.tpg.observations)
+            # iterate over edges between 1st and 2nd layer
+            for i, obs in enumerate(self.tpg.observations):
+                if i % (total // 10**4) == 0:
+                    info('\b' * 7 + f'{100 * i / total: >6.2f}%', end='',
+                         flush=True)
+                user = self.tpg.users[obs.user]  # user node
+                user_index, user_degree = map(user.get, ('index', 'degree'))
+
+                pref = self.tpg.preferences[obs.preference]  # preference node
+                pref_index, pref_degree = map(pref.get, ('index', 'degree'))
+
+                item_d = obs.preference.desirable  # item desirable face
+                item_u = obs.preference.undesirable  # item undesirable face
+                item_d_index = self.tpg.missing_desirable_item_index(item_d)
+                item_u_index = self.tpg.missing_undesirable_item_index(item_u)
+                item_d_degree, item_u_degree = self.tpg.N - 1, self.tpg.N - 1
+
+                # block 1
+                t1[user_index, pref_index] = self.alpha / user_degree
+                # block 2
+                t1[pref_index, user_index] = self.alpha / pref_degree
+                # block 3
+                t1[pref_index, item_d_index] = self.alpha / pref_degree
+                t1[pref_index, item_u_index] = self.alpha / pref_degree
+                # block 5
+                t1[item_d_index, pref_index] = self.alpha / item_d_degree
+                t1[item_u_index, pref_index] = self.alpha / item_u_degree
+
+            # use a Compressed Sparse Row matrix which performs more
+            # efficiently matrix-vector multiplications
+            self._transition_matrix_1 = t1.tocsr()
+            info('\b' * 7 + '100.00%')
+
+            # compute and show some informations
+            nnz = self._transition_matrix_1.nnz \
+                + self.tpg.number_of_missing_preferences * 2 * 2
+            size = self.tpg.number_of_nodes ** 2
+            density = 1 - ((size - nnz) / size)
+            ram_size = self._transition_matrix_1.data.nbytes
+            if ram_size < 1024**2:
+                ram_size /= 1024
+                ram_unit = 'kb'
+            elif ram_size < 1024**3:
+                ram_size /= 1024**2
+                ram_unit = 'mb'
+            else:
+                ram_size /= 1024**3
+                ram_unit = 'gb'
+            info('\n'.join((
+                f'n° of non zero T elements: {nnz: >26d}',
+                f'n° of all T elements: {size: >31d}',
+                f'density of T matrix: {density: >42g}',
+                f'size of T in ram: {ram_size: >38.2f} {ram_unit}')))
+        return self._transition_matrix_1
 
     def __init__(self, file_object, alpha=0.85):
         # check that input file format is allowed, then load its data
@@ -346,23 +529,14 @@ class GRank():
         else:
             info(f'Successfully loaded dataset from {file_object.name}')
 
+        self._alpha = alpha
+        self._transition_matrix_1 = None
         self._test_set_reviews = None
         self._training_set_reviews = None
 
         # build a tripartite graph from the loaded dataset
         self._tpg = TPG(training_set_reviews=self.reviews(training_set=True),
                         test_set_reviews=self.reviews(test_set=True))
-
-        self._alpha = alpha
-
-        t = dok_matrix((self.tpg.number_of_nodes(),
-                        self.tpg.number_of_nodes()),
-                       dtype=float)
-        for a, b in self.tpg.edges:
-            i, j = self.tpg.nodes[a]['id'], self.tpg.nodes[b]['id']
-            t[i, j] = self.alpha / float(degree(self.tpg, a))
-            t[j, i] = self.alpha / float(degree(self.tpg, b))
-        self._transition_matrix = t.tocsr()
 
     def reviews(self, test_set=False, training_set=False):
         """cache and return a tuple of reviews; a review is a dict like:
@@ -397,22 +571,104 @@ class GRank():
                 for user in reviewers:
                     yield dict(user=str(user), item=str(item), stars=int(stars))
 
+    def alpha_dot_transition_matrix_dot(self, ppr):
+        """return the result of:   alpha * T * PPR
+
+           Please note that T is too large to fit into ram the above operation
+           has been splitted into the next one:
+                (alpha * T1 * PPR) + (alpha * T2 * PPR)
+
+           Since the transition matrix T can be partitioned in blocks like:
+
+           users .  preferences  . items x2
+                 |  1  |         |          <~ users
+            -----+-----+---------+-----
+              2  |     |         |  3       <~
+            -----+-----+---------+-----     <~
+                 |     |         |          <~ preferences
+                 |     |         |  4       <~
+                 |     |         |          <~
+            -----+-----+---------+-----
+                 |  5  |    6    |          <~ items x2
+
+           T1 is the transition matrix with only blocks: 1, 2, 3, 5
+           T2 is the transition matrix with only blocks: 4, 6
+
+           Since T1 can fit into ram, it is kept in memory; on the other side
+           T2 which is too large and too sparse is generated line by line with
+           python generators.
+
+           Actually   alpha * T2 * PPR   is also computed on parallel with
+           threads in order to distribute its heavy computational cost on
+           several cores/processors.
+
+           Keep in mind that cell values are:   cell[i, j] = 1 / degree(i)
+           Which means that block 4 has cells with 1/2 as value and block 6 has
+           cells with 1/(N -1) as value.  Cells in other blocks have a variable
+           degree accordingly to how many users expressed a given preference.
+        """
+        global queues, result, result_lock, threads
+        result_lock.acquire()
+        # initialize result as the first term of the sum:  alpha * T1 * PPR
+        result = self.transition_matrix_1.dot(ppr)
+        result_lock.release()
+
+        # initialize needed data structures for a multithreaded execution
+        queues = [Queue() for i in range(args.threads)]
+        # each thread will execute function worker(ppr, alpha, N)
+        threads = [Thread(target=worker,
+                          args=(ppr, self.alpha, self.tpg.N),
+                          name=str(i))  # threads are named '0', '1', ...
+                   for i in range(args.threads)]
+        for t in threads:
+            t.start()
+
+        total = self.tpg.number_of_missing_preferences
+        # iterate over edges between 2nd and 3rd layer
+        # (a python generator is used because they would not fit in ram)
+        for i, (p, pref_index) in enumerate(self.tpg.missing_preferences):
+            if i % (total // 10**4) == 0 and i / total < 1 + 1e-6:
+                if i > 0:
+                    info('\b' * 7 + f'{100 * i / total: >6.2f}%',
+                         end='', flush=True)
+                else:
+                    info(f'Multiplying    alpha * T * PPR(t-1):{" " * 21}',
+                         end='', flush=True)
+
+            id_index = self.tpg.missing_desirable_item_index(p.desirable)
+            iu_index = self.tpg.missing_undesirable_item_index(p.undesirable)
+            # put the workload described by the tuple:
+            # (preference_index, desirable_item_index, undesirable_item_index)
+            # into the queues from which threads get their jobs
+            #
+            # workloads are balanced in a venetian-blind / round-robin fashion
+            queues[i % args.threads].put((pref_index, id_index, iu_index))
+
+            assert i < total, f'WARNING: i > total ({i} > {total}'
+
+        for q in queues:
+            q.join()  # wait far all elements in the queues to be processed
+            q.put((None, None, None))  # send into each queue a stop signal
+        for t in threads:
+            t.join()  # wait for all threads to return
+        info('\b' * 7 + '100.00%')
+        return result
+
     def personalized_vector(self, user):
         """return an empty vector with only a one in the cell corresponding to
            the user (since it is sparse, let us save memory with a Compressed
-           Sparse Column format)
+           Sparse Row format)
         """
-        pv = dok_matrix((self.tpg.number_of_nodes(), 1), dtype=float)
-        pv[self.tpg.nodes[user]['id'], 0] = 1
+        pv = dok_matrix((self.tpg.number_of_nodes, 1))
+        pv[self.tpg.users[user]['index'], 0] = 1
         return pv.tocsc()
 
     def gr(self, item, rank_vector, min_prob=float_info.min, max_prob=1):
         """return the GRank score given to item by Personalized Page Rank"""
-        i_d, i_u = self.tpg.nodes[item.d]['id'], self.tpg.nodes[item.u]['id']
         # probability that random walker pass from desirable item face
-        PPR_id = min(max_prob, max(rank_vector[i_d, 0], min_prob))
+        PPR_id = rank_vector[self.tpg.missing_desirable_item_index(item), 0]
         # probability that random walker pass from undesirable item face
-        PPR_iu = min(max_prob, max(rank_vector[i_u, 0], min_prob))
+        PPR_iu = rank_vector[self.tpg.missing_undesirable_item_index(item), 0]
         if any((PPR_id < min_prob, PPR_id > max_prob,
                 PPR_iu < min_prob, PPR_iu > max_prob)):
             # since these are probabilities they should be in (0, 1]
@@ -422,40 +678,63 @@ class GRank():
                              ' get better recommendations :)\n')
         return PPR_id / (PPR_id + PPR_iu)
 
-    def top_k_recommendations(self, user, k=10, max_iter=10**3):
-        """return a dict with the top_k recommendations and some statistics"""
-        max_iter = 10**3 if max_iter < 1 else max_iter
-        ret = dict(delta_PPR=list(), k=k, max_iter=max_iter, user=user)
-        PV = self.personalized_vector(user)
+    def top_k_recommendations(self, user):
+        """return a list of tuples (<str item_id>, <float GR(item)>)"""
+        info('\n'.join(('=' * 80,
+                        'Started recommendation algorithm:',
+                        '',
+                        f'target user: {user: >40}',
+                        f'n° of threads to use: {args.threads: >31d}',
+                        '')))
+
+        # initialize PPR_t=0 randomly but in a way which gives reproducible
+        # results, aka the seed of the random generator is initialized with
+        # some information user-dependant
         PPR = RandomState(
-            seed=abs(hash(user)) % 2**32).rand(self.tpg.number_of_nodes(), 1)
+            seed=abs(hash(user)) % 2**32).rand(self.tpg.number_of_nodes, 1)
         PPR = PPR / PPR.sum()  # normalize PPR
-        for it in range(1, max_iter):
+
+        # since this is constant for the whole algorithm let us compute it
+        # outside the convergence loop
+        one_minus_alpha_dot_pv = \
+            (1 - self.alpha) * self.personalized_vector(user)
+
+        # preload T1 (a part of transition matrix T)
+        assert self.transition_matrix_1 is not None
+
+        for it in range(1, args.max_iter):
             info(f'\nIteration: {it: >42}')
             PPR_before = PPR
-            PPR = self.transition_matrix.dot(PPR) + (1 - self.alpha) * PV
+            # since the following one is the most heavy operation in the whole
+            # script it is done on parallel with threads
+            PPR = self.alpha_dot_transition_matrix_dot(PPR) \
+                + one_minus_alpha_dot_pv
             # compute the difference between two iterations
             delta_PPR = norm(PPR - PPR_before)
-            ret['delta_PPR'].append(delta_PPR)
             info(f'{" " * 13}norm(PPR(t) - PPR(t-1)):{" " * 15}{delta_PPR:g}')
             # and stop convergence if the norm of the difference is lower than
             # the given threshold
-            if delta_PPR < 1e-16:
-                ret['iterations'] = it
+            if delta_PPR < args.threshold:
                 break
         else:
-            print(f'WARNING: PPR did not converge after {max_iter} iterations;'
-                  ' stop forced')
-            ret['iterations'] = max_iter
-        ret['top_k'] = sorted([(str(i), self.gr(i, PPR))
-                               for i in self.tpg.items],
-                              key=lambda t: t[1],
-                              reverse=True)[:k]
+            # print a warning if maximum number of iterations is exceeded
+            info('\nWARNING: Maximum number of iterations reached'
+                 f' ({args.max_iter}); stop forced!')
+        # sort items by decresing value of GR(item)
+        ret = sorted([(str(i), self.gr(i, PPR))
+                      for i in self.tpg.items],
+                     key=lambda t: t[1],
+                     reverse=True)
+        info('\nEnded recommendation algorithm\n' + '=' * 80)
         return ret
 
 
 if __name__ != '__main__':
     raise SystemExit('Please run this script, do not import it!')
+
+# global variables mainly used for multithreading
+global queues, result, result_lock, threads
+queues, result, result_lock, threads = None, None, Lock(), list()
 
 # bind signal handler to Ctrl + C signal in order to avoid awful stack traces
 # if user stops the script
@@ -498,7 +777,28 @@ parser.add_argument(help='See the above input file specs.',
                     dest='input',
                     metavar='input_file',
                     type=open)
+parser.add_argument('-i', '--max-iter',
+                    default=20,
+                    help='stop convergence after max-iter iterations '
+                    '(default: 20)',
+                    metavar='int',
+                    type=int)
+parser.add_argument('-t', '--threshold',
+                    default=1e-5,
+                    help='stop convergence if: '
+                    '"norm(PPR_t - PPR_t-1) < threshold" (default: 1e-5)',
+                    metavar='float',
+                    type=float)
+parser.add_argument('-j', '--threads',
+                    default=8,
+                    help='run n threads in parallel (default: 8)',
+                    metavar='int',
+                    type=int)
 args = parser.parse_args()  # parse command line arguments
+
+args.threads = 1 if args.threads < 1 else args.threads  # force n° threads >= 1
+args.max_iter = 1 if args.max_iter < 1 else args.max_iter  # force max_iter >= 1
+
 grank = GRank(args.input)
 info(grank.dataset_specs)
 info(grank.tpg.specs)
