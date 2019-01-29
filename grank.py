@@ -20,6 +20,7 @@
 """
 
 from argparse import ArgumentParser, FileType, RawDescriptionHelpFormatter
+from fcntl import flock, LOCK_EX, LOCK_UN
 from math import log2
 from numpy import mean, zeros
 from numpy.linalg import norm
@@ -881,6 +882,16 @@ parser.add_argument(help='See the above input file specs.',
                     dest='input',
                     metavar='input_file',
                     type=open)
+parser.add_argument('-m', '--member',
+                    default=0,
+                    help='index of the process in the group (default: 0)',
+                    metavar='int',
+                    type=int)
+parser.add_argument('-g', '--group-size',
+                    default=1,
+                    help='number of processes in the group (default: 1)',
+                    metavar='int',
+                    type=int)
 parser.add_argument('-s', '--stop-after',
                     default=None,
                     help='stop script after doing recommendations for a '
@@ -920,6 +931,8 @@ parser.add_argument('-j', '--threads',
                     type=int)
 args = parser.parse_args()  # parse command line arguments
 
+if args.member >= args.group_size:
+    raise SystemExit('ERROR: -m/--member is not lower than -g/--group-size')
 if args.stop_after is not None and args.stop_after < 1:
     raise SystemExit('ERROR: -s/--stop-after must be greater than one')
 
@@ -941,6 +954,11 @@ info(grank.specs)
 
 processed_users = 0
 for i, target_user in enumerate(grank.tpg.users):
+    if i % args.group_size != args.member:
+        # this target_user have to be processed by another (-m/--member)
+        # process which as us is part of a larger group of processes of size
+        # -g/--group-size
+        continue
     if args.stop_after is not None and processed_users >= args.stop_after:
         break
     processed_users += 1
@@ -976,6 +994,14 @@ for i, target_user in enumerate(grank.tpg.users):
             else:
                 # create a file descriptor for the output file
                 output_file = open(args.output.name, 'a')
+                info(f'\nprocess {args.member}/{args.group_size} waiting  for '
+                     f'lock on {args.output.name}')
+                flock(output_file, LOCK_EX)  # take a blocking lock on fd
+                info(f'process {args.member}/{args.group_size} acquired     '
+                     f'lock on {args.output.name}')
                 output_file.write(output)
                 output_file.flush()
+                flock(output_file, LOCK_UN)  # release lock on file descriptor
+                info(f'process {args.member}/{args.group_size} released     '
+                     f'lock on {args.output.name}')
                 output_file.close()
