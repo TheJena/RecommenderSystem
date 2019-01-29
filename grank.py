@@ -739,7 +739,35 @@ class GRank():
             # we did not run the recommendation algorithm for this user yet
             # let us do it right now
             self.run_recommendation_algorithm(user)
-        ret = self._recommendation_output[user][:k]
+        if args.only_new:
+            # user requested recommendations of items that
+            # target users have not yet reviewed/bought
+            # let us iterate from the top ranked items to the bottom ones,
+            # looking for k new/never-seen items
+            ret = list()
+            for suggested_item, gr_item in self._recommendation_output[user]:
+                if len(ret) >= k:
+                    break  # we already collected k item
+                if suggested_item not in self.training_set:
+                    # we are recommending an item from the test set; very good!
+                    ret.append((suggested_item, gr_item))
+                    continue
+                for stars, users in self.training_set[suggested_item].items():
+                    if user in users:
+                        # unfortunately this item has already been reviewed
+                        # let us go on to the next one
+                        break
+                else:
+                    # we are recommending an item which the user did not
+                    # review/bought yet; good job!
+                    ret.append((suggested_item, gr_item))
+                    continue
+        else:
+            # user did not request new/never-seen items
+            # let us simply return the top k ranked items
+            ret = self._recommendation_output[user][:k]
+        assert len(ret) == k, 'ERROR: top_k_recommendations() output length ' \
+                              f'is not k {k} as expected but {len(ret)}'
         if show:
             for i, (item, gr) in enumerate(ret):
                 if i == 0:
@@ -862,6 +890,10 @@ parser.add_argument('-t', '--threshold',
                     '"norm(PPR_t - PPR_t-1) < threshold" (default: 1e-5)',
                     metavar='float',
                     type=float)
+parser.add_argument('-n', '--only-new',
+                    action='store_true',
+                    help='force the recommendation of item the user'
+                    'has not bought/reviewed in the training set')
 parser.add_argument('-j', '--threads',
                     default=8,
                     help='run n threads in parallel (default: 8)',
