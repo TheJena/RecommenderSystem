@@ -26,7 +26,7 @@ from numpy import mean, zeros
 from numpy.linalg import norm
 from numpy.random import RandomState
 from queue import Queue
-from scipy.sparse import dok_matrix
+from scipy.sparse import csr_matrix, dok_matrix
 from signal import pthread_kill, signal, SIGINT, SIGTERM, SIGKILL
 from sys import float_info, getsizeof, stderr, stdout
 from threading import Thread, Lock, current_thread, main_thread
@@ -315,31 +315,47 @@ class TPG():
 
     @property
     def dataset(self):
+        assert isinstance(self._dataset, Dataset), \
+               "TPG.dataset is not an instance of Dataset class"
+        assert self._dataset, "TPG.dataset is empty"
         return self._dataset
 
     @property
     def users(self):
-        """dictionary of <str user_id>: <int user_degree>
-           each user_id corresponds to a node in 1st layer
+        """nodes in 1st layer
+
+           dictionary of <str user_id>: <int user_degree>
         """
+        assert isinstance(self._users, dict), "TPG.users is not a dictionary"
+        assert self._users, "TPG.users is empty"
         return self._users
 
     @property
     def M(self):
-        """number of users (nodes in 1st layer)"""
+        """number of nodes in 1st layer"""
         return len(self.users)
 
     @property
     def observations(self):
-        """set of Observations, each one corresponds to a link between
-           1st and 2nd layer
+        """links between 1st and 2nd layer
+
+           set of Observations
         """
+        assert isinstance(self._observations, set), \
+               "TPG.observations is not a set"
+        assert self._observations, "TPG.observations is empty"
         return self._observations
 
     @property
     def preferences(self):
-        """dictionary of <Preference pref_obj>: <int preference_degree>
-           each pref_obj corresponds to a node in 2nd layer"""
+        """nodes in 2nd layer
+
+           dictionary of <Preference pref_obj>: <int preference_degree>
+           (only nodes connected to at least a user are considered here)
+        """
+        assert isinstance(self._preferences, dict), \
+               "TPG.preferences is not a dictionary"
+        assert self._preferences, "TPG.preferences is empty"
         return self._preferences
 
     @property
@@ -357,23 +373,24 @@ class TPG():
                     # ensure this preference has not yet been considered in
                     # self.preferences
                     # (aka those one linked to at least a user)
-                    if preference not in self.preferences.keys():
+                    if preference not in self.preferences:
                         yield (preference, index)
                         index += 1
 
     @property
     def number_of_missing_preferences(self):
         """number of nodes in 2nd layer which are not linked
-           to any node in the 1st layser
+           to any node in the 1st layer
         """
         return self.N * (self.N - 1) - len(self.preferences)
 
     @property
     def items(self):
-        """set of Item, for each one of these two nodes are generated in 3rd
-           layer (one for the item desirable face and one for the undesirable
-           one)
+        """tuple of Item, for each Item two nodes are generated in 3rd layer
+           (one for the item desirable face and one for the undesirable one)
         """
+        assert isinstance(self._items, tuple), "TPG.items is not a tuple"
+        assert self._items, "TPG.items is empty"
         return self._items
 
     @property
@@ -447,7 +464,7 @@ class TPG():
             index += 1
 
     def missing_desirable_item_index(self, item):
-        """return index of desirable items"""
+        """return index of desirable item face"""
         if getattr(self, '_missing_desirables', None) is None:
             self._missing_desirables = dict()
             for index, item in enumerate(self.items):
@@ -456,7 +473,7 @@ class TPG():
         return self._missing_desirables[item]
 
     def missing_undesirable_item_index(self, item):
-        """return index of undesirable items"""
+        """return index of undesirable item face"""
         return self.missing_desirable_item_index(item) + self.N
 
 
@@ -467,9 +484,9 @@ class GRank():
     def specs(self):
         return '\n'.join(('',
                           'GRank specs:',
-                          f'max iterations: {args.max_iter: >7d}',
-                          f'threshold:{" " * 12}{args.threshold:g}',
-                          f'alpha: {self.alpha: >19.2f}',
+                          f'max iterations: {args.max_iter: >15d}',
+                          f'threshold:{" " * 20}{args.threshold:g}',
+                          f'alpha: {self.alpha: >27.2f}',
                           ''))
 
     @property
@@ -660,7 +677,7 @@ class GRank():
             # workloads are balanced in a venetian-blind / round-robin fashion
             queues[i % args.threads].put((pref_index, id_index, iu_index))
 
-            assert i < total, f'WARNING: i > total ({i} > {total}'
+            assert i < total, f'ERROR: i > total ({i} > {total}'
 
         for q in queues:
             q.join()  # wait far all elements in the queues to be processed
@@ -688,20 +705,20 @@ class GRank():
         if any((PPR_id < min_prob, PPR_id > max_prob,
                 PPR_iu < min_prob, PPR_iu > max_prob)):
             # since these are probabilities they should be in (0, 1]
-            raise SystemExit(f'\nWARNING: GR({item}) is either 0, 1 or NaN;'
-                             ' which are all values not allowed!\n\nPlease'
-                             ' reduce the convergence threshold in order to'
-                             ' get better recommendations :)\n')
+            raise SystemExit(f'\nWARNING: GR({item}) is either 0, 1 or NaN; '
+                             f'which are all values not allowed!\n\nPlease '
+                             f'reduce the convergence threshold in order to '
+                             f'get better recommendations :)\n')
         return PPR_id / (PPR_id + PPR_iu)
 
     def run_recommendation_algorithm(self, user):
         """return a list of tuples (<str item_id>, <float GR(item)>)"""
-        info('\n'.join(('=' * 80,
-                        'Started recommendation algorithm:',
-                        '',
+        info('\n'.join((f'=' * 80,
+                        f'Started recommendation algorithm:',
+                        f'',
                         f'target user: {user: >40}',
                         f'n° of threads to use: {args.threads: >31d}',
-                        '')))
+                        f'')))
 
         # initialize PPR_t=0 randomly but in a way which gives reproducible
         # results, aka the seed of the random generator is initialized with
@@ -716,7 +733,9 @@ class GRank():
             (1 - self.alpha) * self.personalized_vector(user)
 
         # preload T1 (a part of transition matrix T)
-        assert self.transition_matrix_1 is not None
+        assert isinstance(self.transition_matrix_1, csr_matrix), \
+               'GRank.transition_matrix_1 is not instance of ' \
+               'scipy.sparse.csr_matrix'
 
         for it in range(1, args.max_iter):
             info(f'\nIteration: {it: >42}')
@@ -750,14 +769,14 @@ class GRank():
             given user)
         """
         if user not in self._recommendation_output:
-            # we did not run the recommendation algorithm for this user yet
-            # let us do it right now
+            # we did not run the recommendation algorithm
+            # for this user yet let us do it right now
             self.run_recommendation_algorithm(user)
         if args.only_new:
             # user requested recommendations of items that
             # target users have not yet reviewed/bought
-            # let us iterate from the top ranked items to the bottom ones,
-            # looking for k new/never-seen items
+            # let us iterate from the top ranked items
+            # to the bottom ones, looking for k new/never-seen items
             ret = list()
             for item, gr_item in self._recommendation_output[user]:
                 if len(ret) >= k:
@@ -780,8 +799,8 @@ class GRank():
             # user did not request new/never-seen items
             # let us simply return the top k ranked items
             ret = self._recommendation_output[user][:k]
-        assert len(ret) == k, 'ERROR: top_k_recommendations() output length ' \
-                              f'is not k {k} as expected but {len(ret)}'
+        assert len(ret) == k, f'ERROR: top_k_recommendations() output length' \
+                              f' is not k ({k}) as expected but {len(ret)}'
         if show:
             for i, (item, gr) in enumerate(ret):
                 if i == 0:
@@ -813,14 +832,15 @@ class GRank():
                     for star, users in source[item].items():
                         if user in users:
                             rating[item] = int(star)
-                            # let us use an exception to exit the two for loops
+                            # let us use an exception to exit
+                            # the two nested for loops
                             raise Exception('item rating found')
             except Exception as e:
                 if str(e) == 'item rating found':
                     continue  # let us look for the next item rating
                 raise e  # propagate exceptions not intended to exit the loops
             else:
-                # if user did not rate that item we estimate a probable
+                # if user did not rate this item we estimate a probable
                 # rating with the mean of the other ratings this user did
                 rating[item] = mean(
                     [int(star)
@@ -864,34 +884,34 @@ if current_thread() == main_thread():
 # build command line argument parser
 parser = ArgumentParser(
     description='\n\t'.join((
-        '',
-        'Apply the collaborative-ranking approach called GRank to a dataset ',
-        'of Amazon reviews.',
-        '',
-        'Input file should be in one of the following supported formats:',
-        f'\t.{", .".join(GRank.allowed_input_formats)} file.',
-        '',
-        'And it should contain a dictionary like:',
-        '\t{"test_set": {\n',
-        '\t\t"<asin>": {"5": <list of reviewerID>,',
-        '\t\t           "4": <list of reviewerID>,',
-        '\t\t           "3": <list of reviewerID>,',
-        '\t\t           "2": <list of reviewerID>,',
-        '\t\t           "1": <list of reviewerID>},',
-        '\t\t  ...',
-        '\t\t},',
-        '\t"training_set": {',
-        '\t\t"<asin>": {"5": <list of reviewerID>,',
-        '\t\t           "4": <list of reviewerID>,',
-        '\t\t           "3": <list of reviewerID>,',
-        '\t\t           "2": <list of reviewerID>,',
-        '\t\t           "1": <list of reviewerID>},',
-        '\t\t  ...',
-        '\t\t},',
-        '\t"descriptions": {"<asin>": "description of the item",',
-        '\t                   ...      ...',
-        '\t\t}',
-        '\t}')),
+        f'',
+        f'Apply the collaborative-ranking approach called GRank to a dataset ',
+        f'of Amazon reviews.',
+        f'',
+        f'Input file should be in one of the following supported formats:',
+        f'\t.{", .".join(Dataset.allowed_input_formats)} file.',
+        f'',
+        f'And it should contain a dictionary like:',
+        f'\t{"test_set": {\n',
+        f'\t\t"<asin>": {"5": <list of reviewerID>,',
+        f'\t\t           "4": <list of reviewerID>,',
+        f'\t\t           "3": <list of reviewerID>,',
+        f'\t\t           "2": <list of reviewerID>,',
+        f'\t\t           "1": <list of reviewerID>},',
+        f'\t\t  ...',
+        f'\t\t},',
+        f'\t"training_set": {',
+        f'\t\t"<asin>": {"5": <list of reviewerID>,',
+        f'\t\t           "4": <list of reviewerID>,',
+        f'\t\t           "3": <list of reviewerID>,',
+        f'\t\t           "2": <list of reviewerID>,',
+        f'\t\t           "1": <list of reviewerID>},',
+        f'\t\t  ...',
+        f'\t\t},',
+        f'\t"descriptions": {"<asin>": "description of the item",',
+        f'\t                   ...      ...',
+        f'\t\t}',
+        f'\t}')),
     formatter_class=RawDescriptionHelpFormatter)
 parser.add_argument(help='See the above input file specs.',
                     dest='input',
@@ -951,8 +971,9 @@ if args.member >= args.group_size:
 if args.stop_after is not None and args.stop_after < 1:
     raise SystemExit('ERROR: -s/--stop-after must be greater than one')
 
-args.threads = 1 if args.threads < 1 else args.threads  # force n° threads >= 1
-args.max_iter = 1 if args.max_iter < 1 else args.max_iter  # force max_iter >= 1
+assert args.threads >= 1, 'ERROR: -j/--threads must be at least 1'
+assert args.max_iter >= 1, 'ERROR: -i/--max-iter must be at least 1'
+
 try:
     # ensure all the k are positive integers sorted by decreasing values
     args.top_k = [10] if not args.top_k else [int(k) for k in args.top_k]
