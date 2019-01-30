@@ -94,6 +94,116 @@ def worker(ppr_vector, alpha, N):
         queues[t_id].task_done()  # tell the queue we executed this workload
 
 
+class Dataset(dict):
+    """import the input file and expose an interface of it"""
+
+    allowed_input_formats = ('json', 'pickle', 'yaml')
+
+    @property
+    def specs(self):
+        both = ' (both training and test set)'
+        train = ' (only training          set)'
+        return '\n'.join((
+            f'',
+            f'Dataset specs:',
+            f'n° users: {self.M: >21}{both}',
+            f'n° items: {self.N: >21}{both}',
+            f'n° reviews: '
+            f'{len(tuple(r for r in self.reviews(training_set=True))): >19}'
+            f'{train}',
+        ))
+
+    @property
+    def test_set(self):
+        """dictionary of <str item_id>: {<str n° star>: [<str user_id>, ...],
+                                          ... }
+        """
+        return self['test_set']
+
+    @property
+    def training_set(self):
+        """dictionary of <str item_id>: {<str n° star>: [<str user_id>, ...],
+                                          ... }
+        """
+        return self['training_set']
+
+    @property
+    def descriptions(self):
+        """dictionary of <str item_id>: <str item description>"""
+        return self['descriptions']
+
+    @property
+    def users(self):
+        """set of <str user_id>"""
+        return set(u for source in (self.test_set, self.training_set)
+                   for item, d in source.items()
+                   for stars, users in d.items()
+                   for u in users)
+
+    @property
+    def items(self):
+        """set of <str item_id>"""
+        return set(item for source in (self.test_set, self.training_set)
+                   for item in source)
+
+    @property
+    def M(self):
+        """n° of users"""
+        if getattr(self, '_m', None) is None:
+            self._m = len(self.users)
+        return self._m
+
+    @property
+    def N(self):
+        """n° of items"""
+        if getattr(self, '_n', None) is None:
+            self._n = len(self.items)
+        return self._n
+
+    def __init__(self, file_object):
+        # check that input file format is allowed, then load its data
+        extension = file_object.name.split('.')[-1]
+        if extension not in self.allowed_input_formats:
+            raise SystemExit(
+                'ERROR: input file format not supported, please use: .'
+                f'{", .".join(Dataset.allowed_input_formats)} file.\n')
+        elif extension == 'json':
+            data = json.load(file_object)
+        elif extension == 'pickle':
+            data = pickle.load(open(file_object.name, 'rb'))
+        elif extension == 'yaml':
+            try:
+                loader = yaml.CLoader  # faster compiled Loader
+            except AttributeError:
+                loader = yaml.Loader  # fallback, slower interpreted Loader
+            data = yaml.load(file_object, Loader=loader)
+        for key in ('test_set', 'training_set', 'descriptions'):
+            if key not in data:
+                raise SystemExit(
+                    'ERROR: missing "{key}" in file {file_object.name}')
+            else:
+                self[key] = data[key]
+        info(f'Successfully loaded dataset from {file_object.name}')
+
+    def reviews(self, test_set=False, training_set=False):
+        """reviews generator; a review is a dict like:
+           {'user': <str user_id>, 'item': <str item_id>, 'stars': <int stars>}
+        """
+        if test_set and not training_set:
+            source = self.test_set
+        elif not test_set and training_set:
+            source = self.training_set
+        else:
+            raise ValueError('ERROR: please set test_set or training_set flag')
+        for item, d in source.items():
+            for stars, reviewers in d.items():
+                if stars not in tuple(str(i) for i in range(1, 6)):
+                    raise ValueError(f'Invalid stars: "{repr(stars)}"; '
+                                     f'string expected.')
+                for user in reviewers:
+                    yield dict(user=str(user), item=str(item), stars=int(stars))
+
+
 class Item():
     """abstract concept of item, with its desirable and undesirable faces"""
 
@@ -190,15 +300,22 @@ class TPG():
         return '\n'.join((
             f'',
             f'Tripartite Graph specs:',
-            f'n° edges: {self.number_of_edges: >21}',
             f'n° nodes: {self.number_of_nodes: >21}',
-            f'├── user layer: {self.M: >15}{both}',
-            f'├── preference layer: {self.N * (self.N - 1): >9}{train}',
-            f'│   (of which only {len(self.preferences): >12}',
-            f'│    linked to users)',
-            f'│',
-            f'└── (un)desirable layer: {2 * self.N: >6}{both}',
+            f'├── U (users) {self.M: >17}{both}',
+            f'├── P (preferences) '
+            f'{len(self.preferences) + self.number_of_missing_preferences: >11}'
+            f'{train}',
+            f'└── R (representatives) {2 * self.N: >7}{both}',
+            f'n° edges: {self.number_of_edges: >21}',
+            f'├── f: U x P -> {"{0, 1}"} {len(self.observations): >8}'
+            f' (agreement function)',
+            f'└── s: P x R -> {"{0, 1}"} {2 * self.N * (self.N - 1): >8}'
+            f' (support   function)',
         ))
+
+    @property
+    def dataset(self):
+        return self._dataset
 
     @property
     def users(self):
@@ -210,7 +327,7 @@ class TPG():
     @property
     def M(self):
         """number of users (nodes in 1st layer)"""
-        return self._m
+        return len(self.users)
 
     @property
     def observations(self):
@@ -262,7 +379,7 @@ class TPG():
     @property
     def N(self):
         """number of items (half of the nodes in 3rd layer)"""
-        return self._n
+        return len(self.items)
 
     @property
     def number_of_nodes(self):
@@ -276,34 +393,18 @@ class TPG():
         """
         return len(self.observations) + 2 * self.N * (self.N - 1)
 
-    def __init__(self, **kwargs):
-        # ensure both training set and test set kwargs were explicitly set
-        if any(('test_set_reviews' not in kwargs,
-                'training_set_reviews' not in kwargs)):
-            raise ValueError('ERROR: please set both training_set_reviews and '
-                             'test_set_reviews kwargs in TPG constructor.')
+    def __init__(self, dataset):
+        self._dataset = dataset  # initialize dataset property
 
-        training_set_reviews = kwargs['training_set_reviews']
-        test_set_reviews = kwargs['test_set_reviews']
+        # populate Item set
+        self._items = tuple(sorted(Item(item) for item in self.dataset.items))
+        # create users nodes (with a null degree)
+        self._users = {user: dict(degree=0) for user in self.dataset.users}
 
-        # create users nodes (with a null degree) and populate items set
-        self._items = set()
-        self._users = dict()
-        for d in training_set_reviews:
-            self._users[d['user']] = dict(degree=0)
-            self._items.add(Item(d['item']))
-        for d in test_set_reviews:
-            self._users[d['user']] = dict(degree=0)
-            self._items.add(Item(d['item']))
-        self._items = tuple(sorted(self._items))
-        # initialize properties which return n° items and n° users
-        self._n = len(self.items)
-        self._m = len(self.users)
-
-        # create preferences nodes, and populate observation set (which
-        # corresponds to the edges between 1st and 2nd layer)
+        # create preferences nodes, and populate observation set
+        # (which corresponds to the edges between 1st and 2nd layer)
         # warning: only preferences explicitly chosen by at least a user are
-        #          considered here; those linked only with the 3rd layer will
+        #          considered here; those linked only to the 3rd layer will
         #          be generated next (because they are too many to stay in ram)
         # user or preference node degree are also updated any time a new edge,
         # starting/ending from/to it, is hit
@@ -312,19 +413,22 @@ class TPG():
         for user in self.users:
             # create a dictionary with a key for each n° stars
             user_reviews = {s: set() for s in range(1, 6)}
-            for d in (d for d in training_set_reviews if d['user'] == user):
-                # add any reviewed item to the corresponding n° stars key
-                user_reviews[int(d['stars'])].add(d['item'])
+            for d in self.dataset.reviews(training_set=True):
+                if d['user'] == user:
+                    # add any reviewed item to the corresponding n° stars key
+                    user_reviews[int(d['stars'])].add(d['item'])
 
-            # iterate over comparisons between items with more stars against
-            # those with less stars (i.e. items with 5 stars vs items with 4,
-            # ... 5 stars vs 1 star, 4 stars vs 3 stars, ..., 2 stars vs 1)
+            # initialize the dictionary of Preferences ant the Observations set
+            # by iterating over comparisons between items with more stars
+            # against those with less stars (i.e. items with 5 stars vs items
+            # with 4, ... 5 stars vs 1 star, 4 stars vs 3 stars, ...,
+            # 2 stars vs 1)
             for more_stars, less_stars in self.comparisons:
                 for asin_d in user_reviews[more_stars]:
                     for asin_u in user_reviews[less_stars]:
                         preference = Preference(Item(asin_d), Item(asin_u))
                         self._observations.add(Observation(user, preference))
-                        if preference not in self.preferences:
+                        if preference not in self._preferences:
                             self._preferences[preference] = dict(degree=3)
                             self._users[user]['degree'] += 1
                         else:
@@ -357,8 +461,7 @@ class TPG():
 
 
 class GRank():
-
-    allowed_input_formats = ('json', 'pickle', 'yaml')
+    """run grank recommendation algorithm on a tripartite graph"""
 
     @property
     def specs(self):
@@ -368,38 +471,6 @@ class GRank():
                           f'threshold:{" " * 12}{args.threshold:g}',
                           f'alpha: {self.alpha: >19.2f}',
                           ''))
-
-    @property
-    def test_set(self):
-        """dictionary of <str item_id>: {<str n° star>: [<str user_id>, ...],
-                                          ... }
-        """
-        return self._test_set
-
-    @property
-    def training_set(self):
-        """dictionary of <str item_id>: {<str n° star>: [<str user_id>, ...],
-                                          ... }
-        """
-        return self._training_set
-
-    @property
-    def descriptions(self):
-        """dictionary of <str item_id>: <str item description>"""
-        return self._descriptions
-
-    @property
-    def dataset_specs(self):
-        both = ' (both training and test set)'
-        train = ' (only training          set)'
-        return '\n'.join((
-            f'',
-            f'Dataset specs:',
-            f'n° users: {len(self.tpg.users): >21}{both}',
-            f'n° items: {len(self.tpg.items):21}{both}',
-            f'n° reviews: {len(self.reviews(training_set=True)): >19}{train}',
-            f'n° observations: {len(self.tpg.observations): >14}{train}'
-        ))
 
     @property
     def tpg(self):
@@ -505,74 +576,16 @@ class GRank():
                 f'size of T in ram: {ram_size: >38.2f} {ram_unit}')))
         return self._transition_matrix_1
 
-    def __init__(self, file_object, alpha=0.85):
-        # check that input file format is allowed, then load its data
-        extension = file_object.name.split('.')[-1]
-        if extension not in self.allowed_input_formats:
-            raise SystemExit('ERROR: input file format not supported, please '
-                             f'use: .{", .".join(GRank.allowed_input_formats)}'
-                             ' file.\n')
-        elif extension == 'json':
-            data = json.load(file_object)
-        elif extension == 'pickle':
-            data = pickle.load(open(file_object.name, 'rb'))
-        elif extension == 'yaml':
-            try:
-                loader = yaml.CLoader  # faster compiled Loader
-            except AttributeError:
-                loader = yaml.Loader  # fallback, slower interpreted Loader
-            data = yaml.load(file_object, Loader=loader)
-        try:
-            self._test_set = data['test_set']
-            self._training_set = data['training_set']
-            self._descriptions = data['descriptions']
-        except KeyError as e:
-            raise SystemExit(f'ERROR: {str(e)}')
-        else:
-            info(f'Successfully loaded dataset from {file_object.name}')
-
+    def __init__(self, dataset, alpha=0.85):
         self._alpha = alpha
-        self._transition_matrix_1 = None
-        self._recommendation_output = dict()
+        self._dataset = dataset
         self._test_set_reviews = None
         self._training_set_reviews = None
+        self._transition_matrix_1 = None
+        self._recommendation_output = dict()
 
         # build a tripartite graph from the loaded dataset
-        self._tpg = TPG(training_set_reviews=self.reviews(training_set=True),
-                        test_set_reviews=self.reviews(test_set=True))
-
-    def reviews(self, test_set=False, training_set=False):
-        """cache and return a tuple of reviews; a review is a dict like:
-           {'user': <str user_id>, 'item': <str item_id>, 'stars': <int stars>}
-        """
-        if test_set and self._test_set_reviews is None:
-            self._test_set_reviews = tuple(self._reviews(test_set=True))
-        elif training_set and self._training_set_reviews is None:
-            self._training_set_reviews = tuple(
-                self._reviews(training_set=True))
-        if test_set:
-            return self._test_set_reviews
-        elif training_set:
-            return self._training_set_reviews
-        raise ValueError('ERROR: please set test_set or training_set flag')
-
-    def _reviews(self, test_set=False, training_set=False):
-        """private reviews generator; a review is a dict like:
-           {'user': <str user_id>, 'item': <str item_id>, 'stars': <int stars>}
-        """
-        if test_set:
-            data = self.test_set
-        elif training_set:
-            data = self.training_set
-        else:
-            raise ValueError('ERROR: please set test_set or training_set flag')
-        for item, d in data.items():
-            for stars, reviewers in d.items():
-                if stars not in tuple(str(i) for i in range(1, 6)):
-                    raise ValueError(f'Invalid stars: "{repr(stars)}"; '
-                                     'string expected.')
-                for user in reviewers:
-                    yield dict(user=str(user), item=str(item), stars=int(stars))
+        self._tpg = TPG(dataset)
 
     def alpha_dot_transition_matrix_dot(self, ppr):
         """return the result of:   alpha * T * PPR
@@ -746,14 +759,14 @@ class GRank():
             # let us iterate from the top ranked items to the bottom ones,
             # looking for k new/never-seen items
             ret = list()
-            for suggested_item, gr_item in self._recommendation_output[user]:
+            for item, gr_item in self._recommendation_output[user]:
                 if len(ret) >= k:
                     break  # we already collected k item
-                if suggested_item not in self.training_set:
+                if item not in self.tpg.dataset.training_set:
                     # we are recommending an item from the test set; very good!
-                    ret.append((suggested_item, gr_item))
+                    ret.append((item, gr_item))
                     continue
-                for stars, users in self.training_set[suggested_item].items():
+                for stars, users in self.tpg.dataset.training_set[item].items():
                     if user in users:
                         # unfortunately this item has already been reviewed
                         # let us go on to the next one
@@ -761,7 +774,7 @@ class GRank():
                 else:
                     # we are recommending an item which the user did not
                     # review/bought yet; good job!
-                    ret.append((suggested_item, gr_item))
+                    ret.append((item, gr_item))
                     continue
         else:
             # user did not request new/never-seen items
@@ -793,7 +806,8 @@ class GRank():
         rating = dict()
         for item, gr_score in recommended_item_list:
             try:
-                for source in (self.test_set, self.training_set):
+                for source in (self.tpg.dataset.test_set,
+                               self.tpg.dataset.training_set):
                     if item not in source:
                         continue
                     for star, users in source[item].items():
@@ -810,7 +824,8 @@ class GRank():
                 # rating with the mean of the other ratings this user did
                 rating[item] = mean(
                     [int(star)
-                     for source in (self.test_set, self.training_set)
+                     for source in (self.tpg.dataset.test_set,
+                                    self.tpg.dataset.training_set)
                      for item, d in source.items()
                      for star, users in d.items()
                      if user in users])
@@ -947,8 +962,8 @@ except ValueError as e:
         raise SystemExit('ERROR: -k/--top-k only takes input values')
     raise SystemExit(f'ERROR: {str(e)}')
 
-grank = GRank(args.input)
-info(grank.dataset_specs)
+grank = GRank(Dataset(args.input))
+info(grank.tpg.dataset.specs)
 info(grank.tpg.specs)
 info(grank.specs)
 
