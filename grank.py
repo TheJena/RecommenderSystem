@@ -28,7 +28,7 @@ from numpy.random import RandomState
 from queue import Queue
 from scipy.sparse import csr_matrix, dok_matrix
 from signal import pthread_kill, signal, SIGINT, SIGTERM, SIGKILL
-from sys import float_info, getsizeof, stderr, stdout
+from sys import float_info, getsizeof, stderr, stdout, version_info
 from threading import Thread, Lock, current_thread, main_thread
 import json
 import pickle
@@ -106,10 +106,10 @@ class Dataset(dict):
         return '\n'.join((
             f'',
             f'Dataset specs:',
-            f'n° users: {self.M: >21}{both}',
-            f'n° items: {self.N: >21}{both}',
+            f'n° users: {self.M:>21}{both}',
+            f'n° items: {self.N:>21}{both}',
             f'n° reviews: '
-            f'{len(tuple(r for r in self.reviews(training_set=True))): >19}'
+            f'{len(tuple(r for r in self.reviews(training_set=True))):>19}'
             f'{train}',
         ))
 
@@ -136,8 +136,7 @@ class Dataset(dict):
     def users(self):
         """set of <str user_id>"""
         return set(u for source in (self.test_set, self.training_set)
-                   for item, d in source.items()
-                   for stars, users in d.items()
+                   for item, d in source.items() for stars, users in d.items()
                    for u in users)
 
     @property
@@ -201,7 +200,9 @@ class Dataset(dict):
                     raise ValueError(f'Invalid stars: "{repr(stars)}"; '
                                      f'string expected.')
                 for user in reviewers:
-                    yield dict(user=str(user), item=str(item), stars=int(stars))
+                    yield dict(user=str(user),
+                               item=str(item),
+                               stars=int(stars))
 
 
 class Item():
@@ -277,8 +278,8 @@ class Observation():
         self.preference = preference
 
     def __eq__(self, other):
-        return all((self.user == other.user,
-                    self.preference == other.preference))
+        return all(
+            (self.user == other.user, self.preference == other.preference))
 
     def __hash__(self):
         return hash((self.user, self.preference))
@@ -300,23 +301,23 @@ class TPG():
         return '\n'.join((
             f'',
             f'Tripartite Graph specs:',
-            f'n° nodes: {self.number_of_nodes: >21}',
-            f'├── U (users) {self.M: >17}{both}',
+            f'n° nodes: {self.number_of_nodes:>21}',
+            f'├── U (users) {self.M:>17}{both}',
             f'├── P (preferences) '
-            f'{len(self.preferences) + self.number_of_missing_preferences: >11}'
+            f'{len(self.preferences) + self.number_of_missing_preferences:>11}'
             f'{train}',
-            f'└── R (representatives) {2 * self.N: >7}{both}',
-            f'n° edges: {self.number_of_edges: >21}',
-            f'├── f: U x P -> {"{0, 1}"} {len(self.observations): >8}'
+            f'└── R (representatives) {2 * self.N:>7}{both}',
+            f'n° edges: {self.number_of_edges:>21}',
+            f'├── f: U x P -> {"{0, 1}"} {len(self.observations):>8}'
             f' (agreement function)',
-            f'└── s: P x R -> {"{0, 1}"} {2 * self.N * (self.N - 1): >8}'
+            f'└── s: P x R -> {"{0, 1}"} {2 * self.N * (self.N - 1):>8}'
             f' (support   function)',
         ))
 
     @property
     def dataset(self):
         assert isinstance(self._dataset, Dataset), \
-               "TPG.dataset is not an instance of Dataset class"
+            "TPG.dataset is not an instance of Dataset class"
         assert self._dataset, "TPG.dataset is empty"
         return self._dataset
 
@@ -341,8 +342,8 @@ class TPG():
 
            set of Observations
         """
-        assert isinstance(self._observations, set), \
-               "TPG.observations is not a set"
+        assert isinstance(self._observations,
+                          set), "TPG.observations is not a set"
         assert self._observations, "TPG.observations is empty"
         return self._observations
 
@@ -353,8 +354,8 @@ class TPG():
            dictionary of <Preference pref_obj>: <int preference_degree>
            (only nodes connected to at least a user are considered here)
         """
-        assert isinstance(self._preferences, dict), \
-               "TPG.preferences is not a dictionary"
+        assert isinstance(self._preferences,
+                          dict), "TPG.preferences is not a dictionary"
         assert self._preferences, "TPG.preferences is empty"
         return self._preferences
 
@@ -482,12 +483,10 @@ class GRank():
 
     @property
     def specs(self):
-        return '\n'.join(('',
-                          'GRank specs:',
-                          f'max iterations: {args.max_iter: >15d}',
-                          f'threshold:{" " * 20}{args.threshold:g}',
-                          f'alpha: {self.alpha: >27.2f}',
-                          ''))
+        return '\n'.join(
+            ('', 'GRank specs:', f'max iterations: {args.max_iter:>15d}',
+             f'threshold:{" " * 20}{args.threshold:g}',
+             f'alpha: {self.alpha:>27.2f}', ''))
 
     @property
     def tpg(self):
@@ -541,7 +540,8 @@ class GRank():
             # iterate over edges between 1st and 2nd layer
             for i, obs in enumerate(self.tpg.observations):
                 if i % (total // 10**4) == 0:
-                    info('\b' * 7 + f'{100 * i / total: >6.2f}%', end='',
+                    info('\b' * 7 + f'{100 * i / total:>6.2f}%',
+                         end='',
                          flush=True)
                 user = self.tpg.users[obs.user]  # user node
                 user_index, user_degree = map(user.get, ('index', 'degree'))
@@ -574,7 +574,7 @@ class GRank():
             # compute and show some informations
             nnz = self._transition_matrix_1.nnz \
                 + self.tpg.number_of_missing_preferences * 2 * 2
-            size = self.tpg.number_of_nodes ** 2
+            size = self.tpg.number_of_nodes**2
             density = 1 - ((size - nnz) / size)
             ram_size = self._transition_matrix_1.data.nbytes
             if ram_size < 1024**2:
@@ -586,11 +586,11 @@ class GRank():
             else:
                 ram_size /= 1024**3
                 ram_unit = 'gb'
-            info('\n'.join((
-                f'n° of non zero T elements: {nnz: >26d}',
-                f'n° of all T elements: {size: >31d}',
-                f'density of T matrix: {density: >42g}',
-                f'size of T in ram: {ram_size: >38.2f} {ram_unit}')))
+            info('\n'.join(
+                (f'n° of non zero T elements: {nnz:>26d}',
+                 f'n° of all T elements: {size:>31d}',
+                 f'density of T matrix: {density:>39.3g}',
+                 f'size of T in ram: {ram_size:>38.2f}  {ram_unit}\n')))
         return self._transition_matrix_1
 
     def __init__(self, dataset, alpha=0.85):
@@ -662,10 +662,10 @@ class GRank():
         for i, (p, pref_index) in enumerate(self.tpg.missing_preferences):
             if i % (total // 10**4) == 0 and i / total < 1 + 1e-6:
                 if i > 0:
-                    info('\b' * 7 + f'{100 * i / total: >6.2f}%',
+                    info('\b' * 7 + f'{100 * i / total:>6.2f}%',
                          end='', flush=True)
                 else:
-                    info(f'Multiplying    alpha * T * PPR(t-1):{" " * 21}',
+                    info('computing alpha * T * PPR(t-1)'.ljust(40),
                          end='', flush=True)
 
             id_index = self.tpg.missing_desirable_item_index(p.desirable)
@@ -684,7 +684,7 @@ class GRank():
             q.put((None, None, None))  # send into each queue a stop signal
         for t in threads:
             t.join()  # wait for all threads to return
-        info('\b' * 7 + '100.00%')
+        info('\b' * 7 + '100.00%', end='', flush=True)
         return result
 
     def personalized_vector(self, user):
@@ -702,8 +702,8 @@ class GRank():
         PPR_id = rank_vector[self.tpg.missing_desirable_item_index(item), 0]
         # probability that random walker pass from undesirable item face
         PPR_iu = rank_vector[self.tpg.missing_undesirable_item_index(item), 0]
-        if any((PPR_id < min_prob, PPR_id > max_prob,
-                PPR_iu < min_prob, PPR_iu > max_prob)):
+        if any((PPR_id < min_prob, PPR_id > max_prob, PPR_iu < min_prob,
+                PPR_iu > max_prob)):
             # since these are probabilities they should be in (0, 1]
             raise SystemExit(f'\nWARNING: GR({item}) is either 0, 1 or NaN; '
                              f'which are all values not allowed!\n\nPlease '
@@ -713,18 +713,14 @@ class GRank():
 
     def run_recommendation_algorithm(self, user):
         """return a list of tuples (<str item_id>, <float GR(item)>)"""
-        info('\n'.join((f'=' * 80,
-                        f'Started recommendation algorithm:',
-                        f'',
-                        f'target user: {user: >40}',
-                        f'n° of threads to use: {args.threads: >31d}',
-                        f'')))
+        info(' Started recommendation algorithm '.center(80, '=') +
+             f'\n\ntarget user: {user:>40}\n')
 
         # initialize PPR_t=0 randomly but in a way which gives reproducible
         # results, aka the seed of the random generator is initialized with
         # some information user-dependant
-        PPR = RandomState(
-            seed=abs(hash(user)) % 2**32).rand(self.tpg.number_of_nodes, 1)
+        PPR = RandomState(seed=abs(hash(user)) % 2**32).rand(
+            self.tpg.number_of_nodes, 1)
         PPR = PPR / PPR.sum()  # normalize PPR
 
         # since this is constant for the whole algorithm let us compute it
@@ -734,11 +730,11 @@ class GRank():
 
         # preload T1 (a part of transition matrix T)
         assert isinstance(self.transition_matrix_1, csr_matrix), \
-               'GRank.transition_matrix_1 is not instance of ' \
-               'scipy.sparse.csr_matrix'
+            'GRank.transition_matrix_1 is not instance of ' \
+            'scipy.sparse.csr_matrix'
 
         for it in range(1, args.max_iter):
-            info(f'\nIteration: {it: >42}')
+            info(f'(iteration {it:>4}/{args.max_iter:<4})', end='', flush=True)
             PPR_before = PPR
             # since the following one is the most heavy operation in the whole
             # script it is done on parallel with threads
@@ -746,7 +742,7 @@ class GRank():
                 + one_minus_alpha_dot_pv
             # compute the difference between two iterations
             delta_PPR = norm(PPR - PPR_before)
-            info(f'{" " * 13}norm(PPR(t) - PPR(t-1)):{" " * 15}{delta_PPR:g}')
+            info('\b' * 40 + f'norm(PPR(t) - PPR(t-1)):{" " * 11}{delta_PPR:g}')
             # and stop convergence if the norm of the difference is lower than
             # the given threshold
             if delta_PPR < args.threshold:
@@ -756,11 +752,10 @@ class GRank():
             info('\nWARNING: Maximum number of iterations reached'
                  f' ({args.max_iter}); stop forced!')
         # sort items by decresing value of GR(item)
-        ret = sorted([(str(i), self.gr(i, PPR))
-                      for i in self.tpg.items],
+        ret = sorted([(str(i), self.gr(i, PPR)) for i in self.tpg.items],
                      key=lambda t: t[1],
                      reverse=True)
-        info('\nEnded recommendation algorithm\n' + '=' * 80)
+        info('\n' + ' Ended recommendation algorithm '.center(80, '='))
         self._recommendation_output[user] = ret
 
     def top_k_recommendations(self, user, k, show=False):
@@ -785,7 +780,7 @@ class GRank():
                     # we are recommending an item from the test set; very good!
                     ret.append((item, gr_item))
                     continue
-                for stars, users in self.tpg.dataset.training_set[item].items():
+                for _, users in self.tpg.dataset.training_set[item].items():
                     if user in users:
                         # unfortunately this item has already been reviewed
                         # let us go on to the next one
@@ -805,7 +800,7 @@ class GRank():
             for i, (item, gr) in enumerate(ret):
                 if i == 0:
                     info(f'\nRecommended items for target user: {user}')
-                info(f'{i: >2d}) GR(<item {item}>): {gr:.6f}')
+                info(f'{i:>2d}) GR(<item {item}>): {gr:.6f}')
             else:
                 info()
         return tuple(((item, float(gr_item)) for item, gr_item in ret))
@@ -842,13 +837,12 @@ class GRank():
             else:
                 # if user did not rate this item we estimate a probable
                 # rating with the mean of the other ratings this user did
-                rating[item] = mean(
-                    [int(star)
-                     for source in (self.tpg.dataset.test_set,
-                                    self.tpg.dataset.training_set)
-                     for item, d in source.items()
-                     for star, users in d.items()
-                     if user in users])
+                rating[item] = mean([
+                    int(star) for source in (self.tpg.dataset.test_set,
+                                             self.tpg.dataset.training_set)
+                    for item, d in source.items() for star, users in d.items()
+                    if user in users
+                ])
         discounted_cumulative_gain = sum(
             (pow(2, rating[item]) - 1) / log2(i + 2)  # because i starts from 0
             for i, (item, _) in enumerate(recommended_item_list))
@@ -863,6 +857,7 @@ class GRank():
 
 if __name__ != '__main__':
     raise SystemExit('Please run this script, do not import it!')
+assert version_info >= (3, 6), 'Please use at least Python 3.6'
 
 try:
     # use the Dumper from the compiled C library (if present)
@@ -882,37 +877,25 @@ if current_thread() == main_thread():
     signal(SIGINT, sigint_handler)
 
 # build command line argument parser
-parser = ArgumentParser(
-    description='\n\t'.join((
-        f'',
-        f'Apply the collaborative-ranking approach called GRank to a dataset ',
-        f'of Amazon reviews.',
-        f'',
-        f'Input file should be in one of the following supported formats:',
-        f'\t.{", .".join(Dataset.allowed_input_formats)} file.',
-        f'',
-        f'And it should contain a dictionary like:',
-        f'\t{"test_set": {\n',
-        f'\t\t"<asin>": {"5": <list of reviewerID>,',
-        f'\t\t           "4": <list of reviewerID>,',
-        f'\t\t           "3": <list of reviewerID>,',
-        f'\t\t           "2": <list of reviewerID>,',
-        f'\t\t           "1": <list of reviewerID>},',
-        f'\t\t  ...',
-        f'\t\t},',
-        f'\t"training_set": {',
-        f'\t\t"<asin>": {"5": <list of reviewerID>,',
-        f'\t\t           "4": <list of reviewerID>,',
-        f'\t\t           "3": <list of reviewerID>,',
-        f'\t\t           "2": <list of reviewerID>,',
-        f'\t\t           "1": <list of reviewerID>},',
-        f'\t\t  ...',
-        f'\t\t},',
-        f'\t"descriptions": {"<asin>": "description of the item",',
-        f'\t                   ...      ...',
-        f'\t\t}',
-        f'\t}')),
-    formatter_class=RawDescriptionHelpFormatter)
+parser = ArgumentParser(description='\n\t'.join(
+    ('', 'Apply the collaborative-ranking approach called GRank to a dataset ',
+     'of Amazon reviews.', '',
+     'Input file should be in one of the following supported formats:',
+     f'\t.{", .".join(Dataset.allowed_input_formats)} file.', '',
+     'And it should contain a dictionary like:', '\t{"test_set": {',
+     '\t\t"<asin>": {"5": <list of reviewerID>,',
+     '\t\t           "4": <list of reviewerID>,',
+     '\t\t           "3": <list of reviewerID>,',
+     '\t\t           "2": <list of reviewerID>,',
+     '\t\t           "1": <list of reviewerID>},', '\t\t  ...', '\t\t},',
+     '\t"training_set": {', '\t\t"<asin>": {"5": <list of reviewerID>,',
+     '\t\t           "4": <list of reviewerID>,',
+     '\t\t           "3": <list of reviewerID>,',
+     '\t\t           "2": <list of reviewerID>,',
+     '\t\t           "1": <list of reviewerID>},', '\t\t  ...', '\t\t},',
+     '\t"descriptions": {"<asin>": "description of the item",',
+     '\t                   ...      ...', '\t\t}', '\t}')),
+                        formatter_class=RawDescriptionHelpFormatter)
 parser.add_argument(help='See the above input file specs.',
                     dest='input',
                     metavar='input_file',
@@ -933,32 +916,38 @@ parser.add_argument('-s', '--stop-after',
                     'certain number of users',
                     metavar='int',
                     type=int)
-parser.add_argument('-o', '--output',
+parser.add_argument('-o',
+                    '--output',
                     default=None,
                     help='print script results on output file',
                     metavar='output_file',
                     type=FileType('w'))
-parser.add_argument('-k', '--top-k',
+parser.add_argument('-k',
+                    '--top-k',
                     action='append',
                     dest='top_k',
                     help='compute also NDCG@k',
                     metavar='int')
-parser.add_argument('-i', '--max-iter',
+parser.add_argument('-i',
+                    '--max-iter',
                     default=20,
                     help='stop convergence after max-iter iterations '
                     '(default: 20)',
                     metavar='int',
                     type=int)
-parser.add_argument('-t', '--threshold',
+parser.add_argument('-t',
+                    '--threshold',
                     default=1e-5,
                     help='stop convergence if: '
                     '"norm(PPR_t - PPR_t-1) < threshold" (default: 1e-5)',
                     metavar='float',
                     type=float)
-parser.add_argument('-n', '--only-new',
+parser.add_argument('-n',
+                    '--only-new',
                     action='store_true',
-                    help='force the recommendation of item the user'
-                    'has not bought/reviewed in the training set')
+                    default=True,
+                    help='force the recommendation of item the user has '
+                    'not bought/reviewed in the training set (default: true)')
 parser.add_argument('-j', '--threads',
                     default=8,
                     help='run n threads in parallel (default: 8)',
