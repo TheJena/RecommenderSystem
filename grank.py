@@ -958,10 +958,11 @@ args = parser.parse_args()  # parse command line arguments
 if args.member >= args.group_size:
     raise SystemExit('ERROR: -m/--member is not lower than -g/--group-size')
 if args.stop_after is not None and args.stop_after < 1:
-    raise SystemExit('ERROR: -s/--stop-after must be greater than one')
-
-assert args.threads >= 1, 'ERROR: -j/--threads must be at least 1'
-assert args.max_iter >= 1, 'ERROR: -i/--max-iter must be at least 1'
+    parser.error('-s/--stop-after must be greater than one')
+if args.threads < 1:
+    parser.error('-j/--threads must be at least 1')
+if args.max_iter < 1:
+    parser.error('-i/--max-iter must be at least 1')
 
 try:
     # ensure all the k are positive integers sorted by decreasing values
@@ -969,7 +970,7 @@ try:
     args.top_k = sorted(set([k for k in args.top_k if k > 0]), reverse=True)
 except ValueError as e:
     if 'invalid literal for int' in str(e):
-        raise SystemExit('ERROR: -k/--top-k only takes input values')
+        parser.error('-k/--top-k only takes integers values')
     raise SystemExit(f'ERROR: {str(e)}')
 
 grank = GRank(Dataset(args.input))
