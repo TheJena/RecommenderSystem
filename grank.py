@@ -20,16 +20,14 @@
 """
 
 from argparse import ArgumentParser, FileType, RawDescriptionHelpFormatter
-from fcntl import flock, LOCK_EX, LOCK_UN
 from math import log2
 from numpy import mean, zeros
 from numpy.linalg import norm
 from numpy.random import RandomState
-from queue import Queue
 from scipy.sparse import csr_matrix, dok_matrix
 from signal import pthread_kill, signal, SIGINT, SIGTERM, SIGKILL
-from sys import float_info, getsizeof, stderr, stdout, version_info
-from threading import Thread, Lock, current_thread, main_thread
+from sys import float_info, stderr, stdout, version_info
+from threading import Thread, current_thread, enumerate as threads, main_thread
 import json
 import pickle
 import yaml
@@ -46,52 +44,10 @@ def sigint_handler(sig_num, stack_frame):
     info(f'\n\nReceived SIGINT (Ctrl + C)')
     for sig in (SIGTERM, SIGKILL):
         info(f'Sending {sig.name} to all threads')
-        for t in threads:
+        for t in threads():
             if isinstance(t, Thread) and t.ident is not None:
                 pthread_kill(t.ident, sig)
     raise SystemExit()
-
-
-def worker(ppr_vector, alpha, N):
-    """this function is the body of threads spawned during the execution of
-       the matrix-vector product (alpha * T2 * PPR).
-
-       Each thread has its queue from which it takes (one by one) the workloads
-       it has to process. A workload is a tuple like:
-           (preference_index, desirable_item_index, undesirable_item_index)
-       which represents the indexes of three nodes of the graph (a preference
-       from 2nd layer and its two respective and linked desirable/undesirable
-       nodes from 3rd layer).  Betweeen theese three nodes there are two
-       undirect edges which are mapped to two different rows of the transition
-       matrix and the two respective transposed different columns (because the
-       graph is undirect).  With this piece of information (2 rows and 2
-       columns) it is possible to execute several independent row-vs-col
-       matrix-vector products on parallel.
-    """
-    global queues, result, result_lock  # global variables for multithreading
-    t_id = int(current_thread().name)  # id of this thread
-    # local variable with the sum of all the results this thread computed
-    local_vector = zeros(ppr_vector.shape)
-    # values of T2 non zero cells in ...
-    pref_value = float(alpha) / 2.0  # ... block 2
-    item_value = float(alpha) / float(N - 1)  # ... block 6
-    while True:
-        # get a workload from the main thread through a queue
-        pref_index, item_d_index, item_u_index = queues[t_id].get()
-        if pref_index is None or item_d_index is None or item_u_index is None:
-            # that workload tell us that there is nothing more to do,
-            # let us sum our local results with the global ones
-            result_lock.acquire()
-            result += local_vector
-            result_lock.release()
-            break
-        # compute the three row-vs-col matrix-vector products corresponding to
-        # the workload
-        local_vector[pref_index] += pref_value * \
-            (ppr_vector[item_d_index, 0] + ppr_vector[item_u_index, 0])
-        local_vector[item_d_index] += item_value * ppr_vector[pref_index, 0]
-        local_vector[item_u_index] += item_value * ppr_vector[pref_index, 0]
-        queues[t_id].task_done()  # tell the queue we executed this workload
 
 
 class Dataset(dict):
@@ -631,60 +587,39 @@ class GRank():
            T2 which is too large and too sparse is generated line by line with
            python generators.
 
-           Actually   alpha * T2 * PPR   is also computed on parallel with
-           threads in order to distribute its heavy computational cost on
-           several cores/processors.
-
            Keep in mind that cell values are:   cell[i, j] = 1 / degree(i)
            Which means that block 4 has cells with 1/2 as value and block 6 has
            cells with 1/(N -1) as value.  Cells in other blocks have a variable
            degree accordingly to how many users expressed a given preference.
         """
-        global queues, result, result_lock, threads
-        result_lock.acquire()
         # initialize result as the first term of the sum:  alpha * T1 * PPR
         result = self.transition_matrix_1.dot(ppr)
-        result_lock.release()
 
-        # initialize needed data structures for a multithreaded execution
-        queues = [Queue() for i in range(args.threads)]
-        # each thread will execute function worker(ppr, alpha, N)
-        threads = [Thread(target=worker,
-                          args=(ppr, self.alpha, self.tpg.N),
-                          name=str(i))  # threads are named '0', '1', ...
-                   for i in range(args.threads)]
-        for t in threads:
-            t.start()
+        pref_value = float(self.alpha) / 2.0  # ... block 2
+        item_value = float(self.alpha) / float(self.tpg.N - 1)  # ... block 6
+        local_vector = zeros(ppr.shape)
 
+        info(' ' * 34, end='', flush=True)
         total = self.tpg.number_of_missing_preferences
         # iterate over edges between 2nd and 3rd layer
         # (a python generator is used because they would not fit in ram)
-        for i, (p, pref_index) in enumerate(self.tpg.missing_preferences):
-            if i % (total // 10**4) == 0 and i / total < 1 + 1e-6:
-                if i > 0:
-                    info('\b' * 7 + f'{100 * i / total:>6.2f}%',
-                         end='', flush=True)
-                else:
-                    info('computing alpha * T * PPR(t-1)'.ljust(40),
-                         end='', flush=True)
-
-            id_index = self.tpg.missing_desirable_item_index(p.desirable)
-            iu_index = self.tpg.missing_undesirable_item_index(p.undesirable)
-            # put the workload described by the tuple:
-            # (preference_index, desirable_item_index, undesirable_item_index)
-            # into the queues from which threads get their jobs
-            #
-            # workloads are balanced in a venetian-blind / round-robin fashion
-            queues[i % args.threads].put((pref_index, id_index, iu_index))
-
+        for i, (p, p_index) in enumerate(self.tpg.missing_preferences):
             assert i < total, f'ERROR: i > total ({i} > {total}'
+            if i % (total // 100) == 0 and i / total < 1:
+                info('\b' * 5 + f'{int(100 * i / total):>3} %',
+                     end='',
+                     flush=True)
 
-        for q in queues:
-            q.join()  # wait far all elements in the queues to be processed
-            q.put((None, None, None))  # send into each queue a stop signal
-        for t in threads:
-            t.join()  # wait for all threads to return
-        info('\b' * 7 + '100.00%', end='', flush=True)
+            d_index = self.tpg.missing_desirable_item_index(p.desirable)
+            u_index = self.tpg.missing_undesirable_item_index(p.undesirable)
+            local_vector[p_index] += pref_value * (ppr[d_index, 0] +
+                                                   ppr[u_index, 0])
+            local_vector[d_index] += item_value * ppr[p_index, 0]
+            local_vector[u_index] += item_value * ppr[p_index, 0]
+
+        info('\b' * 34, end='', flush=True)  # delete percentage
+
+        result += local_vector
         return result
 
     def personalized_vector(self, user):
@@ -742,7 +677,7 @@ class GRank():
                 + one_minus_alpha_dot_pv
             # compute the difference between two iterations
             delta_PPR = norm(PPR - PPR_before)
-            info('\b' * 40 + f'norm(PPR(t) - PPR(t-1)):{" " * 11}{delta_PPR:g}')
+            info(f'{" " * 4}norm(PPR(t) - PPR(t-1)):{delta_PPR:>14.9f}')
             # and stop convergence if the norm of the difference is lower than
             # the given threshold
             if delta_PPR < args.threshold:
@@ -867,10 +802,6 @@ except AttributeError:
     yaml_dumper = yaml.Dumper  # fallback interpreted and slower Dumper
 yaml_kwargs = dict(Dumper=yaml_dumper, default_flow_style=False)
 
-# global variables mainly used for multithreading
-global queues, result, result_lock, threads
-queues, result, result_lock, threads = None, None, Lock(), list()
-
 # bind signal handler to Ctrl + C signal in order to avoid awful stack traces
 # if user stops the script
 if current_thread() == main_thread():
@@ -900,17 +831,8 @@ parser.add_argument(help='See the above input file specs.',
                     dest='input',
                     metavar='input_file',
                     type=open)
-parser.add_argument('-m', '--member',
-                    default=0,
-                    help='index of the process in the group (default: 0)',
-                    metavar='int',
-                    type=int)
-parser.add_argument('-g', '--group-size',
-                    default=1,
-                    help='number of processes in the group (default: 1)',
-                    metavar='int',
-                    type=int)
-parser.add_argument('-s', '--stop-after',
+parser.add_argument('-s',
+                    '--stop-after',
                     default=None,
                     help='stop script after doing recommendations for a '
                     'certain number of users',
@@ -955,8 +877,6 @@ parser.add_argument('-j', '--threads',
                     type=int)
 args = parser.parse_args()  # parse command line arguments
 
-if args.member >= args.group_size:
-    raise SystemExit('ERROR: -m/--member is not lower than -g/--group-size')
 if args.stop_after is not None and args.stop_after < 1:
     parser.error('-s/--stop-after must be greater than one')
 if args.threads < 1:
@@ -978,13 +898,25 @@ info(grank.tpg.dataset.specs)
 info(grank.tpg.specs)
 info(grank.specs)
 
+output_header = ' Command Line Arguments '.center(80, '#') + '\n'
+output_header += yaml.dump(
+    {
+        'args.input': args.input.name,
+        'args.max_iter': args.max_iter,
+        'args.only_new': args.only_new,
+        'args.output': getattr(args.output, 'name', None),
+        'args.stop_after': args.stop_after,
+        'args.parallel': args.parallel,
+        'args.threshold': args.threshold,
+        'args.top_k': args.top_k,
+    }, **yaml_kwargs)
+output_header += ' Results '.center(80, '#') + '\n'
+if args.output is not None:
+    args.output.write(output_header)
+    args.output.flush()
+
 processed_users = 0
 for i, target_user in enumerate(grank.tpg.users):
-    if i % args.group_size != args.member:
-        # this target_user have to be processed by another (-m/--member)
-        # process which as us is part of a larger group of processes of size
-        # -g/--group-size
-        continue
     if args.stop_after is not None and processed_users >= args.stop_after:
         break
     processed_users += 1
@@ -993,41 +925,17 @@ for i, target_user in enumerate(grank.tpg.users):
                                                             show=bool(j == 0))
         ndcg = grank.ndcg(target_user, k, show=True)
         if args.output is not None:
-            output = ''
-            if i == 0:
-                header = ' Command Line Arguments '
-                h_len = (80 - len(header)) // 2
-                output += f'{"#" * h_len}{header}{"#" * h_len}\n'
-            output += yaml.dump({
-                'args.group_size': args.group_size,
-                'args.input': args.input.name,
-                'args.max_iter': args.max_iter,
-                'args.member': args.member,
-                'args.only_new': args.only_new,
-                'args.output': args.output.name,
-                'args.stop_after': args.stop_after,
-                'args.threads': args.threads,
-                'args.threshold': args.threshold,
-                'args.top_k': args.top_k,
-                'k': k,
-                'ndcg@k': ndcg,
-                'target_user': target_user,
-                'top_k_recommendations': top_k_recommendations
-            }, **yaml_kwargs)
-            output += '#' * 80 + '\n'
+            output = '#' * 80 + '\n'
+            output += yaml.dump(
+                {
+                    'top-k': k,
+                    'ndcg@k': ndcg,
+                    'target_user': target_user,
+                    'top_k_recommendations': top_k_recommendations,
+                }, **yaml_kwargs)
+            output += '\n'
             if args.output == stdout:
                 print(output, end='')
             else:
-                # create a file descriptor for the output file
-                output_file = open(args.output.name, 'a')
-                info(f'\nprocess {args.member}/{args.group_size} waiting  for '
-                     f'lock on {args.output.name}')
-                flock(output_file, LOCK_EX)  # take a blocking lock on fd
-                info(f'process {args.member}/{args.group_size} acquired     '
-                     f'lock on {args.output.name}')
-                output_file.write(output)
-                output_file.flush()
-                flock(output_file, LOCK_UN)  # release lock on file descriptor
-                info(f'process {args.member}/{args.group_size} released     '
-                     f'lock on {args.output.name}')
-                output_file.close()
+                with open(args.output.name, 'a') as output_file:
+                    output_file.write(output)
