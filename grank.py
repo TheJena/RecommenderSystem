@@ -21,33 +21,55 @@
 
 from argparse import ArgumentParser, FileType, RawDescriptionHelpFormatter
 from math import log2
-from numpy import mean, zeros
+from multiprocessing import cpu_count, current_process, Lock, Process, Queue
+from numpy import mean
 from numpy.linalg import norm
 from numpy.random import RandomState
 from scipy.sparse import csr_matrix, dok_matrix
-from signal import pthread_kill, signal, SIGINT, SIGTERM, SIGKILL
+from signal import signal, SIGINT
 from sys import float_info, stderr, stdout, version_info
-from threading import Thread, current_thread, enumerate as threads, main_thread
 import json
 import pickle
 import yaml
 
 
-def info(message='', *args, **kwargs):
-    print(message, *args, **kwargs, file=stderr)
+def info(msg, show=True):
+    """flush msg to sterr if show flag is set"""
+    if show:
+        print(msg, end='', file=stderr, flush=True)
+
+
+def process_body(input_queue, output_queue):
+    """multiple processes spawned in background run this function.
+
+       1) take a user from the input_queue
+       2) compute top-k recommendations (and ndcg@k) over this user
+       3) put results in output_queue
+       4) goto 1
+    """
+    while True:
+        target_user = input_queue.get()
+        if target_user is None:  # caught no-more-work-message
+            output_queue.put((None, None, None, None))  # let us ack it
+            return
+        for k in args.top_k:
+            # if anybody is using stderr let us show some progress on it
+            show = stderr_lock.acquire(block=False)
+            output_queue.put(
+                (target_user, k,
+                 grank.top_k_recommendations(target_user, k, show),
+                 grank.ndcg(target_user, k, show)))
+            if show:
+                stderr_lock.release()
 
 
 def sigint_handler(sig_num, stack_frame):
     """Cleanily catch SIGINT and exit without printing long stack traces"""
     if sig_num != SIGINT.value:
         return
-    info(f'\n\nReceived SIGINT (Ctrl + C)')
-    for sig in (SIGTERM, SIGKILL):
-        info(f'Sending {sig.name} to all threads')
-        for t in threads():
-            if isinstance(t, Thread) and t.ident is not None:
-                pthread_kill(t.ident, sig)
-    raise SystemExit()
+    if current_process().name == 'MainProcess':
+        info(f'\n\nReceived SIGINT (Ctrl + C)\n\n')
+    raise SystemExit(sig_num)
 
 
 class Dataset(dict):
@@ -59,14 +81,13 @@ class Dataset(dict):
     def specs(self):
         both = ' (both training and test set)'
         train = ' (only training          set)'
-        return '\n'.join((
-            f'',
-            f'Dataset specs:',
-            f'n° users: {self.M:>21}{both}',
-            f'n° items: {self.N:>21}{both}',
-            f'n° reviews: '
-            f'{len(tuple(r for r in self.reviews(training_set=True))):>19}'
-            f'{train}',
+        return '\n    '.join((
+            f'\nDataset specs:',
+            f'n° users {self.M:>22}{both}',
+            f'n° items {self.N:>22}{both}',
+            f'n° reviews '
+            f'{len(tuple(r for r in self.reviews(training_set=True))):>20}'
+            f'{train}\n',
         ))
 
     @property
@@ -138,7 +159,7 @@ class Dataset(dict):
                     'ERROR: missing "{key}" in file {file_object.name}')
             else:
                 self[key] = data[key]
-        info(f'Successfully loaded dataset from {file_object.name}')
+        info(f'Successfully loaded dataset from {file_object.name}\n')
 
     def reviews(self, test_set=False, training_set=False):
         """reviews generator; a review is a dict like:
@@ -163,7 +184,6 @@ class Dataset(dict):
 
 class Item():
     """abstract concept of item, with its desirable and undesirable faces"""
-
     @property
     def d(self):
         """desirable item face"""
@@ -195,7 +215,6 @@ class Item():
 
 class Preference():
     """desirable item is preferrable over undesirable item"""
-
     @property
     def desirable(self):
         """desirable Item"""
@@ -223,7 +242,6 @@ class Preference():
 
 class Observation():
     """preference of a user between two reviewed items with different rating"""
-
     @property
     def user(self):
         """author of the preference"""
@@ -254,9 +272,8 @@ class TPG():
     def specs(self):
         both = ' (both training and test set)'
         train = ' (only training          set)'
-        return '\n'.join((
-            f'',
-            f'Tripartite Graph specs:',
+        return '\n    '.join((
+            f'\nTripartite Graph specs:',
             f'n° nodes: {self.number_of_nodes:>21}',
             f'├── U (users) {self.M:>17}{both}',
             f'├── P (preferences) '
@@ -267,7 +284,7 @@ class TPG():
             f'├── f: U x P -> {"{0, 1}"} {len(self.observations):>8}'
             f' (agreement function)',
             f'└── s: P x R -> {"{0, 1}"} {2 * self.N * (self.N - 1):>8}'
-            f' (support   function)',
+            f' (support   function)\n',
         ))
 
     @property
@@ -436,13 +453,12 @@ class TPG():
 
 class GRank():
     """run grank recommendation algorithm on a tripartite graph"""
-
     @property
     def specs(self):
-        return '\n'.join(
-            ('', 'GRank specs:', f'max iterations: {args.max_iter:>15d}',
-             f'threshold:{" " * 20}{args.threshold:g}',
-             f'alpha: {self.alpha:>27.2f}', ''))
+        return '\n    '.join(
+            ('\nGRank specs:', f'max iterations {args.max_iter:>34d}',
+             f'threshold{" " * 39}{args.threshold:g}',
+             f'alpha {self.alpha:>46.2f}\n\n'))
 
     @property
     def tpg(self):
@@ -486,8 +502,8 @@ class GRank():
             cell[i, j] = alpha / degree(node i)
         """
         if getattr(self, '_transition_matrix_1', None) is None:
-            info(f'Building sparse transition matrix T:{" " * 21}',
-                 end='', flush=True)
+            show = current_process().name in ('MainProcess', 'Process-1')
+            info(f'Building sparse transition matrix T:{" " * 21}', show)
             # to build this sparse matrix the usage of a Dictionary Of Keys
             # based one is really handy
             t1 = dok_matrix(
@@ -496,9 +512,8 @@ class GRank():
             # iterate over edges between 1st and 2nd layer
             for i, obs in enumerate(self.tpg.observations):
                 if i % (total // 10**4) == 0:
-                    info('\b' * 7 + f'{100 * i / total:>6.2f}%',
-                         end='',
-                         flush=True)
+                    info('\b' * 7 + f'{100 * i / total:>6.2f}%', show)
+
                 user = self.tpg.users[obs.user]  # user node
                 user_index, user_degree = map(user.get, ('index', 'degree'))
 
@@ -525,8 +540,8 @@ class GRank():
             # use a Compressed Sparse Row matrix which performs more
             # efficiently matrix-vector multiplications
             self._transition_matrix_1 = t1.tocsr()
-            info('\b' * 7 + '100.00%')
-
+            info('\b' * 64 + 'Sparse transition matrix T specs:'.ljust(64),
+                 show)
             # compute and show some informations
             nnz = self._transition_matrix_1.nnz \
                 + self.tpg.number_of_missing_preferences * 2 * 2
@@ -542,11 +557,13 @@ class GRank():
             else:
                 ram_size /= 1024**3
                 ram_unit = 'gb'
-            info('\n'.join(
-                (f'n° of non zero T elements: {nnz:>26d}',
-                 f'n° of all T elements: {size:>31d}',
-                 f'density of T matrix: {density:>39.3g}',
-                 f'size of T in ram: {ram_size:>38.2f}  {ram_unit}\n')))
+            info(
+                '\n    '.join(
+                    ('', f'n° of non zero elements {nnz:>25d}',
+                     f'n° of all elements {size:>30d}',
+                     f'density {density:>48.3g}',
+                     f'size in ram {ram_size:>40.2f}  {ram_unit}\n')) + '\n',
+                show)
         return self._transition_matrix_1
 
     def __init__(self, dataset, alpha=0.85):
@@ -560,7 +577,7 @@ class GRank():
         # build a tripartite graph from the loaded dataset
         self._tpg = TPG(dataset)
 
-    def alpha_dot_transition_matrix_dot(self, ppr):
+    def alpha_dot_transition_matrix_dot(self, ppr, show):
         """return the result of:   alpha * T * PPR
 
            Please note that T is too large to fit into ram the above operation
@@ -597,29 +614,23 @@ class GRank():
 
         pref_value = float(self.alpha) / 2.0  # ... block 2
         item_value = float(self.alpha) / float(self.tpg.N - 1)  # ... block 6
-        local_vector = zeros(ppr.shape)
 
-        info(' ' * 34, end='', flush=True)
+        info(' ' * 34, show)
         total = self.tpg.number_of_missing_preferences
         # iterate over edges between 2nd and 3rd layer
         # (a python generator is used because they would not fit in ram)
         for i, (p, p_index) in enumerate(self.tpg.missing_preferences):
             assert i < total, f'ERROR: i > total ({i} > {total}'
             if i % (total // 100) == 0 and i / total < 1:
-                info('\b' * 5 + f'{int(100 * i / total):>3} %',
-                     end='',
-                     flush=True)
+                info('\b' * 5 + f'{int(100 * i / total):>3} %', show)
 
             d_index = self.tpg.missing_desirable_item_index(p.desirable)
             u_index = self.tpg.missing_undesirable_item_index(p.undesirable)
-            local_vector[p_index] += pref_value * (ppr[d_index, 0] +
-                                                   ppr[u_index, 0])
-            local_vector[d_index] += item_value * ppr[p_index, 0]
-            local_vector[u_index] += item_value * ppr[p_index, 0]
+            result[p_index] += pref_value * (ppr[d_index] + ppr[u_index])
+            result[d_index] += item_value * ppr[p_index]
+            result[u_index] += item_value * ppr[p_index]
+        info('\b' * 34, show)  # delete percentage
 
-        info('\b' * 34, end='', flush=True)  # delete percentage
-
-        result += local_vector
         return result
 
     def personalized_vector(self, user):
@@ -646,10 +657,8 @@ class GRank():
                              f'get better recommendations :)\n')
         return PPR_id / (PPR_id + PPR_iu)
 
-    def run_recommendation_algorithm(self, user):
-        """return a list of tuples (<str item_id>, <float GR(item)>)"""
-        info(' Started recommendation algorithm '.center(80, '=') +
-             f'\n\ntarget user: {user:>40}\n')
+    def run_recommendation_algorithm(self, user, show):
+        """creates list of tuples (<str item_id>, <float GR(item)>)"""
 
         # initialize PPR_t=0 randomly but in a way which gives reproducible
         # results, aka the seed of the random generator is initialized with
@@ -668,29 +677,34 @@ class GRank():
             'GRank.transition_matrix_1 is not instance of ' \
             'scipy.sparse.csr_matrix'
 
-        for it in range(1, args.max_iter):
-            info(f'(iteration {it:>4}/{args.max_iter:<4})', end='', flush=True)
+        info(
+            f' Computing recommendations for user {user} '.center(80, '=') +
+            '\n\n', show)
+        for it in range(args.max_iter):
+            info(f'(iteration {it + 1:>4}/{args.max_iter:<4})', show)
             PPR_before = PPR
             # since the following one is the most heavy operation in the whole
             # script it is done on parallel with threads
-            PPR = self.alpha_dot_transition_matrix_dot(PPR) \
+            PPR = self.alpha_dot_transition_matrix_dot(PPR, show) \
                 + one_minus_alpha_dot_pv
             # compute the difference between two iterations
             delta_PPR = norm(PPR - PPR_before)
-            info(f'{" " * 4}norm(PPR(t) - PPR(t-1)):{delta_PPR:>14.9f}')
+            info(f'{" " * 4}norm(PPR(t) - PPR(t-1)):{delta_PPR:>14.9f}\n',
+                 show)
             # and stop convergence if the norm of the difference is lower than
             # the given threshold
             if delta_PPR < args.threshold:
                 break
         else:
             # print a warning if maximum number of iterations is exceeded
-            info('\nWARNING: Maximum number of iterations reached'
-                 f' ({args.max_iter}); stop forced!')
+            info(
+                'WARNING: Maximum number of iterations reached '
+                f'({args.max_iter}) stop forced!\n', show)
+        info('\n', show)  # empty line
         # sort items by decresing value of GR(item)
         ret = sorted([(str(i), self.gr(i, PPR)) for i in self.tpg.items],
                      key=lambda t: t[1],
                      reverse=True)
-        info('\n' + ' Ended recommendation algorithm '.center(80, '='))
         self._recommendation_output[user] = ret
 
     def top_k_recommendations(self, user, k, show=False):
@@ -701,7 +715,7 @@ class GRank():
         if user not in self._recommendation_output:
             # we did not run the recommendation algorithm
             # for this user yet let us do it right now
-            self.run_recommendation_algorithm(user)
+            self.run_recommendation_algorithm(user, show)
         if args.only_new:
             # user requested recommendations of items that
             # target users have not yet reviewed/bought
@@ -731,13 +745,6 @@ class GRank():
             ret = self._recommendation_output[user][:k]
         assert len(ret) == k, f'ERROR: top_k_recommendations() output length' \
                               f' is not k ({k}) as expected but {len(ret)}'
-        if show:
-            for i, (item, gr) in enumerate(ret):
-                if i == 0:
-                    info(f'\nRecommended items for target user: {user}')
-                info(f'{i:>2d}) GR(<item {item}>): {gr:.6f}')
-            else:
-                info()
         return tuple(((item, float(gr_item)) for item, gr_item in ret))
 
     def ndcg(self, user, k, show=False):
@@ -748,7 +755,7 @@ class GRank():
         """compute accuracy of top k recommended items for the given user"""
 
         # this is a list of tuples like: (<str item_id>, <float GR(item_id)>)
-        recommended_item_list = self.top_k_recommendations(user, k)
+        recommended_item_list = self.top_k_recommendations(user, k, show)
 
         # extract from training set and test set
         # the ratings the user gave to recommended items
@@ -785,8 +792,6 @@ class GRank():
             (pow(2, 5) - 1) / log2(i + 2)  # because i starts from 0
             for i, (item, _) in enumerate(recommended_item_list))
         ret = discounted_cumulative_gain / ideal_discounted_cumulative_gain
-        if show:
-            info(f'NDCK@{k}: {ret}')
         return float(ret)
 
 
@@ -802,10 +807,9 @@ except AttributeError:
     yaml_dumper = yaml.Dumper  # fallback interpreted and slower Dumper
 yaml_kwargs = dict(Dumper=yaml_dumper, default_flow_style=False)
 
-# bind signal handler to Ctrl + C signal in order to avoid awful stack traces
-# if user stops the script
-if current_thread() == main_thread():
-    signal(SIGINT, sigint_handler)
+# bind signal handler to Ctrl + C signal in order to avoid awful stack
+# traces if user stops the script
+signal(SIGINT, sigint_handler)
 
 # build command line argument parser
 parser = ArgumentParser(description='\n\t'.join(
@@ -870,17 +874,19 @@ parser.add_argument('-n',
                     default=True,
                     help='force the recommendation of item the user has '
                     'not bought/reviewed in the training set (default: true)')
-parser.add_argument('-j', '--threads',
-                    default=8,
-                    help='run n threads in parallel (default: 8)',
-                    metavar='int',
-                    type=int)
+parser.add_argument(
+    '-j',
+    '--parallel',
+    default=cpu_count(),
+    help=f'process n users in parallel (default: {cpu_count()})',
+    metavar='int',
+    type=int)
 args = parser.parse_args()  # parse command line arguments
 
 if args.stop_after is not None and args.stop_after < 1:
     parser.error('-s/--stop-after must be greater than one')
-if args.threads < 1:
-    parser.error('-j/--threads must be at least 1')
+if args.parallel < 1:
+    parser.error('-j/--parallel must be at least 1')
 if args.max_iter < 1:
     parser.error('-i/--max-iter must be at least 1')
 
@@ -898,6 +904,7 @@ info(grank.tpg.dataset.specs)
 info(grank.tpg.specs)
 info(grank.specs)
 
+# write command line arguments to output file (improves reproducibility)
 output_header = ' Command Line Arguments '.center(80, '#') + '\n'
 output_header += yaml.dump(
     {
@@ -914,28 +921,66 @@ output_header += ' Results '.center(80, '#') + '\n'
 if args.output is not None:
     args.output.write(output_header)
     args.output.flush()
+    if args.output != stdout:
+        args.output.close()  # close output file if != stdout
 
-processed_users = 0
-for i, target_user in enumerate(grank.tpg.users):
-    if args.stop_after is not None and processed_users >= args.stop_after:
-        break
-    processed_users += 1
-    for j, k in enumerate(args.top_k):
-        top_k_recommendations = grank.top_k_recommendations(target_user, k,
-                                                            show=bool(j == 0))
-        ndcg = grank.ndcg(target_user, k, show=True)
-        if args.output is not None:
-            output = '#' * 80 + '\n'
-            output += yaml.dump(
-                {
-                    'top-k': k,
-                    'ndcg@k': ndcg,
-                    'target_user': target_user,
-                    'top_k_recommendations': top_k_recommendations,
-                }, **yaml_kwargs)
-            output += '\n'
-            if args.output == stdout:
-                print(output, end='')
-            else:
-                with open(args.output.name, 'a') as output_file:
-                    output_file.write(output)
+stderr_buff, stderr_lock = '', Lock()  # create a buffer and a lock for stderr
+
+# create an input and and output queue for the pool of background workers
+job_queue, ret_queue = Queue(), Queue()
+workers = [
+    Process(target=process_body, args=(job_queue, ret_queue))
+    for _ in range(args.parallel)
+]
+
+for p in workers:
+    p.start()  # spawn workers in background
+
+# fill workers' input queue with the desired number of users to explore
+for i, target_user in enumerate(sorted(grank.tpg.users)):
+    if args.stop_after is None or i < args.stop_after:
+        job_queue.put(target_user)
+
+# fill workers' input queue with no-more-work-messages
+for p in workers:
+    job_queue.put(None)
+
+results = dict()  # let us collect worker results in this dictionary
+for _ in range(args.parallel):  # loop until all workers finish their job
+    while True:
+        user, k, top_k_ranking, ndcg = ret_queue.get()
+        if any((user is None, k is None, top_k_ranking is None, ndcg is None)):
+            break  # a worker finished its job, let us exit while-true-loop
+
+        if user not in results:
+            results[user] = dict(ranking=dict(), ndcg=dict())
+
+        # fill stderr buffer with recommendations for the current user
+        stderr_buff += f' Recommended items for user {user} '.center(80, '=')
+        stderr_buff += '\n\n'
+        for position, (item, gr) in enumerate(top_k_ranking):
+            stderr_buff += f'{position:>4d}) GR(<item {item}>) {gr:>32.6f}\n'
+            if position not in results[user]['ranking']:
+                results[user]['ranking'][position] = dict(item=item, gr=gr)
+        stderr_buff += f'\n{" " * 6}NDCG@{k}'.ljust(15) + f'{ndcg:>46.6f}\n\n'
+
+        results[user]['ndcg'][k] = ndcg
+
+        # rewrite output file with also this user results
+        if args.output is not None and args.output != stdout:
+            with open(args.output.name, 'w') as f:
+                f.write(output_header + yaml.dump(results, **yaml_kwargs))
+
+        # if anybody has the lock or the buffer has too many lines
+        if stderr_lock.acquire(block=len(stderr_buff.splitlines()) >= 25):
+            info(stderr_buff)  # let us flush the stderr buffer
+            stderr_buff = ''
+            stderr_lock.release()
+
+for p in workers:
+    p.join()  # wait for all workers
+
+# flush any information left in the buffer
+stderr_lock.acquire()
+info(stderr_buff)
+stderr_lock.release()
