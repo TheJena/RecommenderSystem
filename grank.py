@@ -984,3 +984,21 @@ for p in workers:
 stderr_lock.acquire()
 info(stderr_buff)
 stderr_lock.release()
+
+# for each k compute the mean of all user's ndcg@k
+ndcg_mean = {
+    k: float(mean([user_data['ndcg'][k] for _, user_data in results.items()]))
+    for k in args.top_k
+}
+# then rewrite output file with also this piece of information (ndcg mean)
+if args.output is not None and args.output != stdout:
+    with open(args.output.name, 'w') as f:
+        f.write(output_header + yaml.dump(results, **yaml_kwargs) +
+                ' Mean NDCG@K '.center(80, '#') + '\n' +
+                yaml.dump(ndcg_mean, **yaml_kwargs))
+
+# and write it also on stdout
+info(' Mean NDCG@K '.center(80, '=') + '\n\n')
+for k in reversed(args.top_k):
+    info(f'{" " *6}NDCG@{k}'.ljust(15) + f'{ndcg_mean[k]:>46.6f}\n')
+info('\n')
