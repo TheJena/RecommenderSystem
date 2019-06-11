@@ -83,10 +83,10 @@ class Dataset(dict):
         train = ' (only training          set)'
         return '\n    '.join((
             f'\nDataset specs:',
-            f'n° users {self.M:>22}{both}',
-            f'n° items {self.N:>22}{both}',
+            f'n° users {self.M:>34}{both}',
+            f'n° items {self.N:>34}{both}',
             f'n° reviews '
-            f'{len(tuple(r for r in self.reviews(training_set=True))):>20}'
+            f'{len(tuple(r for r in self.reviews(training_set=True))):>32}'
             f'{train}\n',
         ))
 
@@ -274,16 +274,16 @@ class TPG():
         train = ' (only training          set)'
         return '\n    '.join((
             f'\nTripartite Graph specs:',
-            f'n° nodes: {self.number_of_nodes:>21}',
-            f'├── U (users) {self.M:>17}{both}',
+            f'n° nodes: {self.number_of_nodes:>33}',
+            f'├── U (users) {self.M:>29}{both}',
             f'├── P (preferences) '
-            f'{len(self.preferences) + self.number_of_missing_preferences:>11}'
+            f'{len(self.preferences) + self.number_of_missing_preferences:>23}'
             f'{train}',
-            f'└── R (representatives) {2 * self.N:>7}{both}',
-            f'n° edges: {self.number_of_edges:>21}',
-            f'├── f: U x P -> {"{0, 1}"} {len(self.observations):>8}'
+            f'└── R (representatives) {2 * self.N:>19}{both}',
+            f'n° edges: {self.number_of_edges:>33}',
+            f'├── f: U x P -> {"{0, 1}"} {len(self.observations):>20}'
             f' (agreement function)',
-            f'└── s: P x R -> {"{0, 1}"} {2 * self.N * (self.N - 1):>8}'
+            f'└── s: P x R -> {"{0, 1}"} {2 * self.N * (self.N - 1):>20}'
             f' (support   function)\n',
         ))
 
@@ -456,9 +456,9 @@ class GRank():
     @property
     def specs(self):
         return '\n    '.join(
-            ('\nGRank specs:', f'max iterations {args.max_iter:>34d}',
-             f'threshold{" " * 39}{args.threshold:g}',
-             f'alpha {self.alpha:>46.2f}\n\n'))
+            ('\nGRank specs:', f'max iterations {args.max_iter:>28d}',
+             f'threshold{" " * 33}{args.threshold:g}',
+             f'alpha {self.alpha:>40.2f}\n\n'))
 
     @property
     def tpg(self):
@@ -503,7 +503,7 @@ class GRank():
         """
         if getattr(self, '_transition_matrix_1', None) is None:
             show = current_process().name in ('MainProcess', 'Process-1')
-            info(f'Building sparse transition matrix T:{" " * 21}', show)
+            info(f'Building sparse transition matrix T:{" " * 23}', show)
             # to build this sparse matrix the usage of a Dictionary Of Keys
             # based one is really handy
             t1 = dok_matrix(
@@ -512,7 +512,7 @@ class GRank():
             # iterate over edges between 1st and 2nd layer
             for i, obs in enumerate(self.tpg.observations):
                 if i % (total // 10**4) == 0:
-                    info('\b' * 7 + f'{100 * i / total:>6.2f}%', show)
+                    info('\b' * 8 + f'{100 * i / total:>6.2f} %', show)
 
                 user = self.tpg.users[obs.user]  # user node
                 user_index, user_degree = map(user.get, ('index', 'degree'))
@@ -559,10 +559,10 @@ class GRank():
                 ram_unit = 'gb'
             info(
                 '\n    '.join(
-                    ('', f'n° of non zero elements {nnz:>25d}',
-                     f'n° of all elements {size:>30d}',
-                     f'density {density:>48.3g}',
-                     f'size in ram {ram_size:>40.2f}  {ram_unit}\n')) + '\n',
+                    ('', f'n° of non zero elements {nnz:>26d}',
+                     f'n° of all elements {size:>31d}',
+                     f'density {density:>49.3g}',
+                     f'size in ram {ram_size:>41.2f}  {ram_unit}\n')) + '\n',
                 show)
         return self._transition_matrix_1
 
@@ -615,21 +615,21 @@ class GRank():
         pref_value = float(self.alpha) / 2.0  # ... block 2
         item_value = float(self.alpha) / float(self.tpg.N - 1)  # ... block 6
 
-        info(' ' * 34, show)
+        info(' ' * 38, show)
         total = self.tpg.number_of_missing_preferences
         # iterate over edges between 2nd and 3rd layer
         # (a python generator is used because they would not fit in ram)
         for i, (p, p_index) in enumerate(self.tpg.missing_preferences):
             assert i < total, f'ERROR: i > total ({i} > {total}'
-            if i % (total // 100) == 0 and i / total < 1:
-                info('\b' * 5 + f'{int(100 * i / total):>3} %', show)
+            if i % (total // 10**4) == 0 and i / total < 1:
+                info('\b' * 8 + f'{100 * i / total:>6.2f} %', show)
 
             d_index = self.tpg.missing_desirable_item_index(p.desirable)
             u_index = self.tpg.missing_undesirable_item_index(p.undesirable)
             result[p_index] += pref_value * (ppr[d_index] + ppr[u_index])
             result[d_index] += item_value * ppr[p_index]
             result[u_index] += item_value * ppr[p_index]
-        info('\b' * 34, show)  # delete percentage
+        info('\b' * 38, show)  # delete percentage
 
         return result
 
@@ -689,7 +689,7 @@ class GRank():
                 + one_minus_alpha_dot_pv
             # compute the difference between two iterations
             delta_PPR = norm(PPR - PPR_before)
-            info(f'{" " * 4}norm(PPR(t) - PPR(t-1)):{delta_PPR:>14.9f}\n',
+            info(f'{" " * 4}norm(PPR(t) - PPR(t-1)):{delta_PPR:>15.9f}\n',
                  show)
             # and stop convergence if the norm of the difference is lower than
             # the given threshold
