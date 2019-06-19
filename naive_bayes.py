@@ -20,14 +20,44 @@
 """
 
 from argparse import ArgumentParser, FileType, RawDescriptionHelpFormatter
-from sys import version_info
+from sys import stderr, version_info
 import json
 import pickle
 import yaml
 
 
+def debug(msg):
+    """print msg on stderr"""
+    print(msg, file=stderr)
+
+
 class Dataset(dict):
     """import the input file and expose an interface of it"""
+
+    @property
+    def documents(self):
+        """dictionary of <str document_id>: <str document_description>"""
+        assert 'descriptions' in self, \
+            'Dataset constructor did not initialize descriptions'
+        return self['descriptions']
+
+    @property
+    def test_set(self):
+        """dictionary of <str user_id>: [
+               (<str document_id>, <bool like/dislike>), ... ]
+        """
+        assert 'test_set' in self, \
+            'Dataset constructor did not build test set'
+        return self['test_set']
+
+    @property
+    def training_set(self):
+        """dictionary of <str user_id>: [
+               (<str document_id>, <bool like/dislike>), ... ]
+        """
+        assert 'training_set' in self, \
+            'Dataset constructor did not build training set'
+        return self['training_set']
 
     def __init__(self, input_file):
         allowed_input = [
@@ -47,6 +77,35 @@ class Dataset(dict):
         else:
             raise SystemExit('Input file format not supported, please use: '
                              '.json, .pickle or .yaml file.')
+
+        # populate documents property
+        self['descriptions'] = dict()
+        for asin, description in data['descriptions'].items():
+            self['descriptions'][asin] = description
+
+        # merge test and training set because, in the content-based
+        # part, a stratified-random-sampling (which will be done
+        # afterwards) maintains the distribution of the user ratings,
+        # while a simple random sampling does not.
+        #
+        # source: http://dl.acm.org/citation.cfm?id=295240.295795
+        # (look at section "Experiments and results")
+        self['users'] = dict()
+        for source in ('test_set', 'training_set'):
+            for asin, reviews in data[source].items():
+                if asin not in self['descriptions'].keys():
+                    debug(f'WARNING: document {asin} has no description')
+                    continue
+
+                for star, users in reviews.items():
+                    for user in users:
+                        if user not in self['users']:
+                            self['users'][user] = list()
+
+                        self['users'][user].append(tuple((asin, int(star))))
+                        debug(f'user {user} rated {star}/5 document {asin}')
+
+        raise NotImplementedError('Still to populate training and test set')
 
 
 if __name__ != '__main__':
