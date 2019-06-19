@@ -20,6 +20,10 @@
 """
 
 from argparse import ArgumentParser, FileType, RawDescriptionHelpFormatter
+from numpy import array, quantile
+from numpy.random import RandomState
+from os import environ
+from sklearn.model_selection import StratifiedShuffleSplit
 from sys import stderr, version_info
 import json
 import pickle
@@ -102,15 +106,74 @@ class Dataset(dict):
                         if user not in self['users']:
                             self['users'][user] = list()
 
-                        self['users'][user].append(tuple((asin, int(star))))
-                        debug(f'user {user} rated {star}/5 document {asin}')
+                        # Since a user rating criteria can be quite
+                        # constant (e.g. a user who always rates 5
+                        # stars) let us make it more variable by
+                        # adding some noise in order to divide better
+                        # training and test set afterwards
+                        star = float(star) + next(NormalNoise(user))
 
-        raise NotImplementedError('Still to populate training and test set')
+                        self['users'][user].append(tuple((asin, star)))
+                        debug(f'user {user:16} rated {star:.3f}/5 '
+                              f'document {asin:16}')
+
+        # populate training and test set properties with a stratified
+        # random sampling
+        self['test_set'] = dict()
+        self['training_set'] = dict()
+        for user, data in self['users'].items():
+            top_quartile = quantile(a=[star for _, star in data], q=0.75)
+
+            x, y = zip(*data)  # x == asin; y == star
+            x = array(x)
+            y = array([j >= top_quartile for j in y])
+            train_idx, test_idx = next(
+                StratifiedShuffleSplit(test_size=1 / 10,
+                                       random_state=0).split(x, y))
+            self['training_set'][user] = list(zip(x[train_idx], y[train_idx]))
+            self['test_set'][user] = list(zip(x[test_idx], y[test_idx]))
+
+
+class NormalNoise(object):
+    """store in a class variable a personalized RandomState for each user"""
+
+    _mu = 0  # mean
+    _sigma = 1 / 3  # std-dev
+    _generator = dict()  # per-user RandomState dictionary
+
+    def __init__(self, user_id):
+        if user_id not in NormalNoise._generator:
+            # In order to have reproducible results, the random
+            # generator is initialized with some user-dependant
+            # information
+            NormalNoise._generator[user_id] = RandomState(
+                # the python builtin hash() uses a random salt;
+                # setting the environment variable PYTHONHASHSEED
+                # makes its returned values constant across different
+                # runs
+                seed=abs(hash(user_id)) % 2**32)
+        self.user_id = user_id
+
+    def __next__(self):
+        """return a float between -1 and +1
+
+           By using a std-dev of 1/3 and a mean of 1, the 99.7% of the
+           values will be within mu ± 3 * std_dev; i.e. -1 and +1.
+
+           Source: section "Standard_deviation_and_coverage" of
+           https://en.wikipedia.org/wiki/Normal_distribution
+        """
+        return NormalNoise._generator[self.user_id].normal(
+            self._mu, self._sigma)
 
 
 if __name__ != '__main__':
     raise SystemExit('Please run this script, do not import it!')
 assert version_info >= (3, 6), 'Please use at least Python 3.6'
+
+if str(environ.get('PYTHONHASHSEED', 'unset')) != '0':
+    raise SystemExit('Please set environment variable PYTHONHASHSEED '
+                     'to 0 (zero) to have reproducible results')
 
 parser = ArgumentParser(description='\n\t'.join(
     ('', 'Apply the content-based approach called Naive Bayes to a dataset',
@@ -136,4 +199,4 @@ parser.add_argument(help='See the above input file specs.',
                     type=FileType())
 args = parser.parse_args()
 
-Dataset(args.input)
+Dataset(args.input).test_set
