@@ -142,7 +142,7 @@ class Dataset(dict):
         if extension not in self.allowed_input_formats:
             raise SystemExit(
                 'ERROR: input file format not supported, please use: .'
-                f'{", .".join(Dataset.allowed_input_formats)} file.\n')
+                f'{", .".join(Dataset.allowed_input_formats)}\n')
         elif extension == 'json':
             data = json.load(file_object)
         elif extension == 'pickle':
@@ -816,7 +816,7 @@ parser = ArgumentParser(description='\n\t'.join(
     ('', 'Apply the collaborative-ranking approach called GRank to a dataset ',
      'of Amazon reviews.', '',
      'Input file should be in one of the following supported formats:',
-     f'\t.{", .".join(Dataset.allowed_input_formats)} file.', '',
+     f'\t.{", .".join(Dataset.allowed_input_formats)}', '',
      'And it should contain a dictionary like:', '\t{"test_set": {',
      '\t\t"<asin>": {"5": <list of reviewerID>,',
      '\t\t           "4": <list of reviewerID>,',
