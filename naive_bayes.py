@@ -20,11 +20,18 @@
 """
 
 from argparse import ArgumentParser, FileType, RawDescriptionHelpFormatter
+from collections import Counter
+from html import unescape
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+from nltk.tokenize import word_tokenize
 from numpy import array, quantile
 from numpy.random import RandomState
 from os import environ
+from re import sub as regex_substitute
 from sklearn.model_selection import StratifiedShuffleSplit
 from sys import stderr, version_info
+from string import punctuation
 import json
 import pickle
 import yaml
@@ -33,6 +40,139 @@ import yaml
 def debug(msg):
     """print msg on stderr"""
     print(msg, file=stderr)
+
+
+class Corpus(dict):
+    """apply standard natural language processing operations to the
+       documents of a Dataset
+
+       corpus_object[<str document_id>] = {
+           'tokens' = ( token1, token2, ... ),
+       }
+    """
+
+    dictionary_expansion = tuple(
+        sorted(
+            ('007', '2', '2002', '3', '360', '4', '64', '7', '9', 'action',
+             'adaptor', 'adventure', 'alien', 'amazon', 'arkham', 'assassin',
+             'asylum', 'av', 'basketball', 'batman', 'best', 'black', 'blu',
+             'blue', 'book', 'brilliant', 'bundle', 'burnout', 'cable',
+             'carbon', 'card', 'cd', 'century', 'change', 'charge',
+             'comfortable', 'comic', 'controller', 'creed', 'criminal', 'data',
+             'dead', 'deceptive', 'department', 'deserve', 'die', 'disc',
+             'dreamcast', 'duke', 'dvd', 'eli', 'eng', 'entertain', 'evil',
+             'expander', 'expansion', 'extra', 'fan', 'fifa', 'fun', 'game',
+             'gamecube', 'genesis', 'german', 'globe', 'god', 'gold', 'good',
+             'government', 'grand', 'gray', 'green', 'guitar', 'hard',
+             'hardcore', 'hawk', 'hdtv', 'headset', 'hedgehog', 'hero',
+             'hilarious', 'hope', 'humor', 'include', 'independent',
+             'institute', 'interview', 'invasion', 'inventor', 'investigate',
+             'kid', 'kit', 'kombact', 'like', 'logo', 'loyal', 'luck', 'man',
+             'mario', 'marvel', 'mathematics', 'memory', 'mexico', 'microsoft',
+             'mirror', 'modern', 'mortal', 'multi', 'murder', 'musicality',
+             'nbsp', 'need', 'nintendo', 'nonfiction', 'officer', 'package',
+             'pad', 'party', 'pc', 'pennyroyal', 'platform', 'play', 'player',
+             'police', 'praise', 'product', 'professor', 'ps2', 'ps3', 'psp',
+             'quality', 'quantum', 'ray', 'rechargeable', 'remote', 'reporter',
+             'resident', 'revenge', 'romantic', 'sega', 'sennheiser', 'series',
+             'sims', 'soccer', 'soft', 'solace', 'sony', 'speed', 'squaresoft',
+             'station', 'super', 'tale', 'tooth', 'transfer', 'tribal', 'trip',
+             'true', 'twentieth', 'ubi', 'vista', 'war', 'warmhearted', 'wii',
+             'win', 'wireless', 'world', 'xbox'),
+            key=len,
+            reverse=True))
+
+    T = tuple()  # sorted tuple with all the words in the documents
+
+    @property
+    def documents(self):
+        """generator of document_id in the corpus"""
+        for asin in sorted(self.keys()):
+            yield asin
+
+    @property
+    def N(self):
+        """number of documents in the corpus"""
+        return len(self.keys())
+
+    def __init__(self, dataset, do_lemmatization=True):
+        assert isinstance(dataset, Dataset), \
+            'Corpus constructor needs an instance of Dataset as argument'
+
+        porter = PorterStemmer()
+        stop_words = stopwords.words('english')
+        word_net_lemmatizer = WordNetLemmatizer()
+
+        Corpus.T = set()  # use a set temporarily
+        for asin, description in dataset.documents.items():
+            # unescape html character entity references
+            raw_text = unescape(description)
+            raw_text = raw_text.replace('’', "'")  # utf8 to ascii
+
+            # split camel case words
+            raw_text = regex_substitute(
+                '([A-Z][a-z]+)', r' \1',
+                regex_substitute('([A-Z]+)', r' \1', raw_text))
+
+            # substitute any punctuation mark with a space
+            raw_text = raw_text.translate(
+                str.maketrans(punctuation, ' ' * len(punctuation)))
+
+            # remove multiple spaces
+            raw_text = ' '.join(raw_text.split())
+
+            # split raw text into tokens
+            token_list = word_tokenize(raw_text.lower(), language='english')
+
+            # remove stop-words
+            token_list = [
+                token for token in token_list
+                if token.lower() not in stop_words
+            ]
+
+            if do_lemmatization:  # do stemming of dictionary known words
+                lemmas_list = list()
+                for token in token_list:
+                    # let us start with the hardcoded dictionary expansion
+                    # since it is probably faster
+                    for dict_word in Corpus.dictionary_expansion:
+                        if dict_word.lower() in token.lower():
+                            lemmas_list.append(dict_word)
+                            break
+                    else:
+                        # then if any word matched, let us try with the
+                        # slower word-net dictionary lemmatizer
+                        for pos in ('n', 'a', 'v'):
+                            lemma = word_net_lemmatizer.lemmatize(token,
+                                                                  pos=pos)
+                            if lemma != token:
+                                lemmas_list.append(lemma)
+                                break
+                if lemmas_list:
+                    token_list = lemmas_list  # update token list
+                else:
+                    debug(f'WARNING: empty token list after lemmatization\n'
+                          f'\t(asin: {asin},\n'
+                          f'\t token_list: {repr(token_list)},\n'
+                          f'\t description: {repr(description)})')
+
+            # do stemming of both words in and not in dictionary
+            token_list = [porter.stem(token) for token in token_list]
+
+            # remove tokens which have punctuaction
+            token_list = [
+                token for token in token_list
+                if not set(token).intersection(punctuation) and len(token) > 2
+            ]
+
+            # store and count the amount of tokens
+            self[asin] = Counter(token_list)
+            Corpus.T |= set(token_list)  # update all words in the corpus
+        Corpus.T = tuple(sorted(Corpus.T))
+
+        debug(f'"dictionary length" = |T| = {len(Corpus.T):7}')
+        debug(f'"corpus length"     = |D| = {self.N:7}')
+        debug('')
 
 
 class Dataset(dict):
@@ -132,6 +272,7 @@ class Dataset(dict):
                                        random_state=0).split(x, y))
             self['training_set'][user] = list(zip(x[train_idx], y[train_idx]))
             self['test_set'][user] = list(zip(x[test_idx], y[test_idx]))
+        debug('')
 
 
 class NormalNoise(object):
@@ -198,5 +339,5 @@ parser.add_argument(help='See the above input file specs.',
                     metavar='input_file',
                     type=FileType())
 args = parser.parse_args()
-
-Dataset(args.input).test_set
+dataset = Dataset(args.input)
+corpus = Corpus(dataset)
