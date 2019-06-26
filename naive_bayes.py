@@ -25,7 +25,7 @@ from html import unescape
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-from numpy import array, quantile
+from numpy import array, log, power, quantile, sqrt
 from numpy.random import RandomState
 from os import environ
 from re import sub as regex_substitute
@@ -167,12 +167,86 @@ class Corpus(dict):
 
             # store and count the amount of tokens
             self[asin] = Counter(token_list)
+            # precompute the total number of tokens in the document
+            setattr(self[asin], 'number_of_tokens', sum(self[asin].values()))
             Corpus.T |= set(token_list)  # update all words in the corpus
         Corpus.T = tuple(sorted(Corpus.T))
 
         debug(f'"dictionary length" = |T| = {len(Corpus.T):7}')
         debug(f'"corpus length"     = |D| = {self.N:7}')
+        self._cached_max_f = dict()
+        self._cached_idf = dict()
+        self._cached_denormalized_tf_idf = dict()
+        self._cached_normalized_tf_idf = dict()
+        self._cached_vector = dict()
         debug('')
+
+    def n(self, t_k):
+        """return how many documents have token t_k at least once"""
+        return sum(self[d_j][t_k] > 0 for d_j in self.documents)
+
+    def f(self, t_k, d_j):
+        """return the frequency of token t_k in document d_j"""
+        return float(self[d_j][t_k]) / self[d_j].number_of_tokens
+
+    def max_f(self, d_j):
+        """return the maximum token frequency in document d_j"""
+        try:  # try to return the cached value
+            return self._cached_max_f[d_j]
+        except KeyError:  # this is a cache miss, let us compute the value
+            self._cached_max_f[d_j] = float(max(
+                self[d_j].values())) / self[d_j].number_of_tokens
+        return self._cached_max_f[d_j]
+
+    def tf(self, t_k, d_j):
+        """return normalized term frequency of token t_k in document d_j"""
+        return self.f(t_k, d_j) / self.max_f(d_j)
+
+    def idf(self, t_k):
+        """return the inverse document frequency of term t_k in the corpus"""
+        try:  # try to return the cached value
+            return self._cached_idf[t_k]
+        except KeyError:  # this is a cache miss, let us compute the value
+            self._cached_idf[t_k] = log(self.N / self.n(t_k))
+        return self._cached_idf[t_k]
+
+    def _tf_idf(self, t_k, d_j):
+        """return the denormalized TermFrequency-InverseDocumentFrequency"""
+        try:  # try to return the cached value
+            return self._cached_denormalized_tf_idf[(t_k, d_j)]
+        except KeyError:  # this is a cache miss, let us compute the value
+            self._cached_denormalized_tf_idf[(
+                t_k, d_j)] = self.tf(t_k, d_j) * self.idf(t_k)  # TF * IDF
+        return self._cached_denormalized_tf_idf[(t_k, d_j)]
+
+    def cosine_normalized_tf_idf(self, t_k, d_j):
+        """return the normalized TermFrequency-InverseDocumentFrequency"""
+        if t_k not in self[d_j]:
+            return 0  # because the TermFrequency factor would be zero
+        try:  # try to return the cached value
+            return self._cached_normalized_tf_idf[(t_k, d_j)]
+        except KeyError:  # this is a cache miss, let us compute the value
+            denominator = sqrt(
+                sum(power(self._tf_idf(t_s, d_j), 2) for t_s in Corpus.T))
+            if denominator < 1e-16:
+                return 0  # avoid division-by-zero
+            else:
+                self._cached_normalized_tf_idf[(
+                    t_k, d_j)] = self._tf_idf(t_k, d_j) / denominator
+        return self._cached_normalized_tf_idf[(t_k, d_j)]
+
+    tf_idf = cosine_normalized_tf_idf  # alias
+
+    def vector_of(self, document_id):
+        """return the vector with the weights of each token in the document"""
+        try:  # try to return the cached value
+            return self._cached_vector[document_id]
+        except KeyError:
+            self._cached_vector[document_id] = array([
+                self.tf_idf(token, document_id)
+                for k, token in enumerate(Corpus.T)
+            ])
+        return self._cached_vector[document_id]
 
 
 class Dataset(dict):
