@@ -260,6 +260,13 @@ class Dataset(dict):
         return self['descriptions']
 
     @property
+    def top_quartile(self):
+        """dictionary of <str user_id>: <float between -1 and 6>"""
+        assert 'top_quartile' in self, \
+            'Dataset constructor did not build top_quartile'
+        return self['top_quartile']
+
+    @property
     def test_set(self):
         """dictionary of <str user_id>: [
                (<str document_id>, <bool like/dislike>), ... ]
@@ -331,17 +338,18 @@ class Dataset(dict):
                         debug(f'user {user:16} rated {star:.3f}/5 '
                               f'document {asin:16}')
 
-        # populate training and test set properties with a stratified
-        # random sampling
+        # populate top_quartile, training and test set properties
+        self['top_quartile'] = dict()
         self['test_set'] = dict()
         self['training_set'] = dict()
         for user, data in self['users'].items():
             top_quartile = quantile(a=[star for _, star in data], q=0.75)
+            self['top_quartile'][user] = top_quartile
 
             x, y = zip(*data)  # x == asin; y == star
             x = array(x)
             y = array([j >= top_quartile for j in y])
-            train_idx, test_idx = next(
+            train_idx, test_idx = next(  # use a stratified random sampling
                 StratifiedShuffleSplit(test_size=1 / 10,
                                        random_state=0).split(x, y))
             self['training_set'][user] = list(zip(x[train_idx], y[train_idx]))
