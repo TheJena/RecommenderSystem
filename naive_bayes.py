@@ -261,7 +261,7 @@ class Dataset(dict):
 
     @property
     def top_quartile(self):
-        """dictionary of <str user_id>: <float between -1 and 6>"""
+        """dictionary of <str user_id>: <float between 0 and 1>"""
         assert 'top_quartile' in self, \
             'Dataset constructor did not build top_quartile'
         return self['top_quartile']
@@ -269,7 +269,7 @@ class Dataset(dict):
     @property
     def test_set(self):
         """dictionary of <str user_id>: [
-               (<str document_id>, <bool like/dislike>), ... ]
+               (<str document_id>, <float between 0 and 1>), ... ]
         """
         assert 'test_set' in self, \
             'Dataset constructor did not build test set'
@@ -278,7 +278,7 @@ class Dataset(dict):
     @property
     def training_set(self):
         """dictionary of <str user_id>: [
-               (<str document_id>, <bool like/dislike>), ... ]
+               (<str document_id>, <float between 0 and 1>), ... ]
         """
         assert 'training_set' in self, \
             'Dataset constructor did not build training set'
@@ -333,9 +333,12 @@ class Dataset(dict):
                         # adding some noise in order to divide better
                         # training and test set afterwards
                         star = float(star) + next(NormalNoise(user))
+                        # normalize star value
+                        # (x - x_min) / (x_max - x_min)
+                        star = round(float(star + 1) / 7.0, ndigits=3)
 
                         self['users'][user].append(tuple((asin, star)))
-                        debug(f'user {user:16} rated {star:.3f}/5 '
+                        debug(f'user {user:16} rated {5 * star:.1f}/5 '
                               f'document {asin:16}')
 
         # populate top_quartile, training and test set properties
@@ -348,10 +351,11 @@ class Dataset(dict):
 
             x, y = zip(*data)  # x == asin; y == star
             x = array(x)
-            y = array([j >= top_quartile for j in y])
             train_idx, test_idx = next(  # use a stratified random sampling
-                StratifiedShuffleSplit(test_size=1 / 10,
-                                       random_state=0).split(x, y))
+                StratifiedShuffleSplit(
+                    n_splits=2, test_size=1 / 10, random_state=0).split(
+                        x, array([j >= top_quartile for j in y])))
+            y = array(y)
             self['training_set'][user] = list(zip(x[train_idx], y[train_idx]))
             self['test_set'][user] = list(zip(x[test_idx], y[test_idx]))
         debug('')
@@ -385,9 +389,15 @@ class NormalNoise(object):
 
            Source: section "Standard_deviation_and_coverage" of
            https://en.wikipedia.org/wiki/Normal_distribution
+
+           In any case the 0.3% of the values outside [-1, +1] will be
+           forced to the closest endpoint
         """
-        return NormalNoise._generator[self.user_id].normal(
-            self._mu, self._sigma)
+        return min(
+            +1,
+            max(
+                -1, NormalNoise._generator[self.user_id].normal(
+                    self._mu, self._sigma)))
 
 
 if __name__ != '__main__':
