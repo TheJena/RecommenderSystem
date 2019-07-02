@@ -177,6 +177,12 @@ class Corpus(dict):
                 if not set(token).intersection(punctuation) and len(token) > 2
             ]
 
+            # let us ensure that the token list has at least a token
+            # in order to avoid divisions by zero afterwards. This
+            # empty token is added to all the documents in order to
+            # make it not really important
+            token_list.append('')
+
             # store and count the amount of tokens
             self[asin] = Counter(token_list)
             # precompute the total number of tokens in the document
