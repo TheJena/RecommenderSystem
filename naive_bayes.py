@@ -29,7 +29,9 @@ from numpy import array, log, power, quantile, sqrt
 from numpy.random import RandomState
 from os import environ
 from re import sub as regex_substitute
+from scipy.sparse import lil_matrix
 from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.naive_bayes import MultinomialNB as MultinomialNaiveBayes
 from sys import stderr, version_info
 from string import punctuation
 import json
@@ -40,6 +42,16 @@ import yaml
 def debug(msg):
     """print msg on stderr"""
     print(msg, file=stderr)
+
+
+def get_X_y(user, preferences, corpus, scaling_coefficient):
+    """Return matrix with document features and vector of ratings"""
+    X, y = lil_matrix((len(preferences), len(corpus.T))), list()
+
+    for row, (document, rating) in enumerate(preferences):
+        X[row] = corpus.vector_of(document)
+        y.append(round(rating * scaling_coefficient))
+    return X.tocsr(), array(y, dtype=int)
 
 
 class Corpus(dict):
@@ -430,6 +442,33 @@ parser.add_argument(help='See the above input file specs.',
                     dest='input',
                     metavar='input_file',
                     type=FileType())
+parser.add_argument(
+    '-a',
+    '--scaling-factor',
+    default=1e3,
+    help='votes will be normalized and then scaled by that factor '
+    '(default: 1000)',
+    metavar='int',
+    type=int)
 args = parser.parse_args()
+
+if args.scaling_factor < 5:
+    parser.error('-a/--scaling-factor must be at least 5')
+
 dataset = Dataset(args.input)
 corpus = Corpus(dataset)
+
+for i, (user, preferences) in enumerate(
+        sorted(dataset.training_set.items(), key=lambda t: t[0])):
+
+    # training
+    classifier = MultinomialNaiveBayes()
+    classifier.fit(*get_X_y(
+        user, preferences, corpus, scaling_coefficient=args.scaling_factor))
+
+    # validation
+    X_test, y_real = get_X_y(user,
+                             dataset.test_set[user],
+                             corpus,
+                             scaling_coefficient=args.scaling_factor)
+    y_predicted = classifier.predict(X_test)
