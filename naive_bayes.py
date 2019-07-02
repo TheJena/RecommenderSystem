@@ -39,9 +39,10 @@ import pickle
 import yaml
 
 
-def debug(msg):
-    """print msg on stderr"""
-    print(msg, file=stderr)
+def debug(msg='', min_level=1, max_level=99):
+    """print messages on stderr"""
+    if args.loglevel and args.loglevel in range(min_level, max_level + 1):
+        print(msg, file=stderr)
 
 
 def get_X_y(user, preferences, corpus, scaling_coefficient):
@@ -52,6 +53,10 @@ def get_X_y(user, preferences, corpus, scaling_coefficient):
         X[row] = corpus.vector_of(document)
         y.append(round(rating * scaling_coefficient))
     return X.tocsr(), array(y, dtype=int)
+
+
+def info(msg=''):
+    print(msg, file=stderr)
 
 
 class Corpus(dict):
@@ -197,7 +202,7 @@ class Corpus(dict):
         self._cached_denormalized_tf_idf = dict()
         self._cached_normalized_tf_idf = dict()
         self._cached_vector = dict()
-        debug('')
+        debug()
 
     def n(self, t_k):
         """return how many documents have token t_k at least once"""
@@ -356,8 +361,10 @@ class Dataset(dict):
                         star = round(float(star + 1) / 7.0, ndigits=3)
 
                         self['users'][user].append(tuple((asin, star)))
-                        debug(f'user {user:16} rated {5 * star:.1f}/5 '
-                              f'document {asin:16}')
+                        debug(
+                            f'user {user:16} rated {5 * star:.1f}/5 '
+                            f'document {asin:16}',
+                            min_level=2)
 
         # populate top_quartile, training and test set properties
         self['top_quartile'] = dict()
@@ -376,7 +383,7 @@ class Dataset(dict):
             y = array(y)
             self['training_set'][user] = list(zip(x[train_idx], y[train_idx]))
             self['test_set'][user] = list(zip(x[test_idx], y[test_idx]))
-        debug('')
+        debug()
 
 
 class NormalNoise(object):
@@ -448,6 +455,13 @@ parser.add_argument(help='See the above input file specs.',
                     dest='input',
                     metavar='input_file',
                     type=FileType())
+parser.add_argument(
+    '-v',
+    '--verbose',
+    action='count',
+    default=0,
+    dest='loglevel',
+    help='print verbose messages (multiple -v increase verbosty)\n')
 parser.add_argument('-k',
                     '--top-k',
                     action='append',
@@ -493,13 +507,13 @@ for i, (user, preferences) in enumerate(
             set(rated_doc for rated_doc, rate in preferences)))
     y_predicted = classifier.predict(
         csr_matrix([corpus.vector_of(asin) for asin in never_seen_documents]))
-    debug(f' Recommended items for user {user} '.center(80, '=') + '\n')
+    info(f' Recommended items for user {user} '.center(80, '=') + '\n')
     for position, (item, rating) in enumerate(
             sorted(zip(never_seen_documents, list(y_predicted)),
                    key=lambda t: t[1],  # sort by predicted rating
                    reverse=True)[:max(args.top_k)]):
         rating /= float(args.scaling_factor)
-        debug(f'{position:>4d}) NaiveBayes(<item {item}>) {rating:>24.6f}')
+        info(f'{position:>4d}) NaiveBayes(<item {item}>) {rating:>24.6f}')
 
     # validation
     X_test, y_real = get_X_y(user,
