@@ -41,6 +41,18 @@ import pickle
 import yaml
 
 
+def accuracy(contingency_table):
+    """(true positives + true negatives) / total cases
+
+       actually sklearn returns a contingency_table like:
+        true_negatives | false_positives
+       ----------------+----------------
+       false_negatives | true_positives
+    """
+    return float(contingency_table[1, 1] +
+                 contingency_table[0, 0]) / contingency_table.sum()
+
+
 def boolean_array(float_array, threshold):
     """return an array with True in positions above threshold"""
     assert isinstance(float_array, type(array([]))), \
@@ -73,6 +85,14 @@ def debug(msg='', min_level=1, max_level=99):
         print(msg, file=stderr)
 
 
+def f_score(contingency_table, beta=1):
+    """return the harmonic average of precision and recall (with beta=1)"""
+    return ((1 + power(beta, 2)) * precision(contingency_table) *
+            recall(contingency_table)) / (
+                (power(beta, 2) * precision(contingency_table)) +
+                recall(contingency_table))
+
+
 def get_X_y(user, preferences, corpus, scaling_coefficient):
     """Return matrix with document features and vector of ratings"""
     X, y = lil_matrix((len(preferences), len(corpus.T))), list()
@@ -85,6 +105,28 @@ def get_X_y(user, preferences, corpus, scaling_coefficient):
 
 def info(msg=''):
     print(msg, file=stderr)
+
+
+def precision(contingency_table):
+    """true positives / (true positives + false positives)
+
+       actually sklearn returns a contingency_table like:
+        true_negatives | false_positives
+       ----------------+----------------
+       false_negatives | true_positives
+    """
+    return contingency_table[1, 1] / float(contingency_table.sum(axis=0)[1])
+
+
+def recall(contingency_table):
+    """true positives / (true positives + false negatives)
+
+       actually sklearn returns a contingency_table like:
+        true_negatives | false_positives
+       ----------------+----------------
+       false_negatives | true_positives
+    """
+    return contingency_table[1, 1] / float(contingency_table.sum(axis=1)[1])
 
 
 class Corpus(dict):
@@ -556,4 +598,8 @@ for i, (user, preferences) in enumerate(
         boolean_array(y_real, top_quartile),
         boolean_array(y_predicted, top_quartile))
 
-print(ascii_confusion_matrix(contingency_table))
+info(ascii_confusion_matrix(contingency_table) + '\n')
+info(f'accuracy:  {accuracy(contingency_table):8.3f}')
+info(f'precision: {precision(contingency_table):8.3f}')
+info(f'recall:    {recall(contingency_table):8.3f}')
+info(f'f-score:   {f_score(contingency_table):8.3f}')
