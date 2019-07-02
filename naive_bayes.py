@@ -25,18 +25,46 @@ from html import unescape
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-from numpy import array, log, power, quantile, sqrt
+from numpy import array, log, power, quantile, sqrt, zeros
 from numpy.random import RandomState
 from os import environ
 from re import sub as regex_substitute
 from scipy.sparse import csr_matrix, lil_matrix
+from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.naive_bayes import MultinomialNB as MultinomialNaiveBayes
 from sys import stderr, version_info
 from string import punctuation
+from tabulate import tabulate
 import json
 import pickle
 import yaml
+
+
+def boolean_array(float_array, threshold):
+    """return an array with True in positions above threshold"""
+    assert isinstance(float_array, type(array([]))), \
+        'First argument should be a numpy array'
+    return float_array > threshold
+
+
+def ascii_confusion_matrix(contingency_table):
+    """return ascii-table representation of a contingency table"""
+    return 'Confusion matrix:\n' + tabulate(
+        [['', 'Liked\n(test-set)', 'Disliked\n(test-set)'],
+         [
+             'Liked\n(prediction)',
+             int(contingency_table[1, 1]),
+             int(contingency_table[1, 0])
+         ],
+         [
+             'Disliked\n(prediction)',
+             int(contingency_table[0, 1]),
+             int(contingency_table[0, 0])
+         ]],
+        numalign='center',
+        stralign='center',
+        tablefmt='grid')
 
 
 def debug(msg='', min_level=1, max_level=99):
@@ -493,6 +521,8 @@ except ValueError as e:
 dataset = Dataset(args.input)
 corpus = Corpus(dataset)
 
+
+contingency_table = zeros((2, 2))
 for i, (user, preferences) in enumerate(
         sorted(dataset.training_set.items(), key=lambda t: t[0])):
 
@@ -521,3 +551,9 @@ for i, (user, preferences) in enumerate(
                              corpus,
                              scaling_coefficient=args.scaling_factor)
     y_predicted = classifier.predict(X_test)
+    top_quartile = dataset['top_quartile'][user] * args.scaling_factor
+    contingency_table += confusion_matrix(
+        boolean_array(y_real, top_quartile),
+        boolean_array(y_predicted, top_quartile))
+
+print(ascii_confusion_matrix(contingency_table))
