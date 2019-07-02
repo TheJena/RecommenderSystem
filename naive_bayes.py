@@ -29,7 +29,7 @@ from numpy import array, log, power, quantile, sqrt
 from numpy.random import RandomState
 from os import environ
 from re import sub as regex_substitute
-from scipy.sparse import lil_matrix
+from scipy.sparse import csr_matrix, lil_matrix
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.naive_bayes import MultinomialNB as MultinomialNaiveBayes
 from sys import stderr, version_info
@@ -442,6 +442,12 @@ parser.add_argument(help='See the above input file specs.',
                     dest='input',
                     metavar='input_file',
                     type=FileType())
+parser.add_argument('-k',
+                    '--top-k',
+                    action='append',
+                    dest='top_k',
+                    help='compute also NDCG@k',
+                    metavar='int')
 parser.add_argument(
     '-a',
     '--scaling-factor',
@@ -455,6 +461,15 @@ args = parser.parse_args()
 if args.scaling_factor < 5:
     parser.error('-a/--scaling-factor must be at least 5')
 
+try:
+    # ensure all the k are positive integers sorted by decreasing values
+    args.top_k = [10] if not args.top_k else [int(k) for k in args.top_k]
+    args.top_k = sorted(set([k for k in args.top_k if k > 0]), reverse=True)
+except ValueError as e:
+    if 'invalid literal for int' in str(e):
+        parser.error('-k/--top-k only takes integers values')
+    raise SystemExit(f'ERROR: {str(e)}')
+
 dataset = Dataset(args.input)
 corpus = Corpus(dataset)
 
@@ -465,6 +480,20 @@ for i, (user, preferences) in enumerate(
     classifier = MultinomialNaiveBayes()
     classifier.fit(*get_X_y(
         user, preferences, corpus, scaling_coefficient=args.scaling_factor))
+
+    # prediction
+    never_seen_documents = sorted(
+        set(corpus.documents).difference(
+            set(rated_doc for rated_doc, rate in preferences)))
+    y_predicted = classifier.predict(
+        csr_matrix([corpus.vector_of(asin) for asin in never_seen_documents]))
+    debug(f' Recommended items for user {user} '.center(80, '=') + '\n')
+    for position, (item, rating) in enumerate(
+            sorted(zip(never_seen_documents, list(y_predicted)),
+                   key=lambda t: t[1],  # sort by predicted rating
+                   reverse=True)[:max(args.top_k)]):
+        rating /= float(args.scaling_factor)
+        debug(f'{position:>4d}) NaiveBayes(<item {item}>) {rating:>24.6f}')
 
     # validation
     X_test, y_real = get_X_y(user,
