@@ -532,6 +532,13 @@ parser.add_argument(
     default=0,
     dest='loglevel',
     help='print verbose messages (multiple -v increase verbosty)\n')
+parser.add_argument('-s',
+                    '--stop-after',
+                    default=None,
+                    help='stop script after doing recommendations for a '
+                    'certain number of users',
+                    metavar='int',
+                    type=int)
 parser.add_argument('-k',
                     '--top-k',
                     action='append',
@@ -548,6 +555,8 @@ parser.add_argument(
     type=int)
 args = parser.parse_args()
 
+if args.stop_after is not None and args.stop_after < 1:
+    parser.error('-s/--stop-after must be greater than one')
 if args.scaling_factor < 5:
     parser.error('-a/--scaling-factor must be at least 5')
 
@@ -567,6 +576,8 @@ corpus = Corpus(dataset)
 contingency_table = zeros((2, 2))
 for i, (user, preferences) in enumerate(
         sorted(dataset.training_set.items(), key=lambda t: t[0])):
+    if args.stop_after is not None and i >= args.stop_after:
+        break
 
     # training
     classifier = MultinomialNaiveBayes()
