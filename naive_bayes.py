@@ -25,7 +25,7 @@ from html import unescape
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-from numpy import array, log, power, quantile, sqrt, zeros
+from numpy import array, log, power, quantile, seterr, sqrt, zeros
 from numpy.random import RandomState
 from os import environ
 from re import sub as regex_substitute
@@ -115,7 +115,18 @@ def precision(contingency_table):
        ----------------+----------------
        false_negatives | true_positives
     """
-    return contingency_table[1, 1] / float(contingency_table.sum(axis=0)[1])
+    old_settings = seterr(invalid='raise')
+    try:
+        return contingency_table[1, 1] / float(
+            contingency_table.sum(axis=0)[1])
+    except FloatingPointError as e:
+        if float(contingency_table.sum(axis=0)[1]) < 1:
+            debug('division by zero avoided, return Nan', min_level=2)
+        else:
+            debug(str(e), min_level=2)
+        return float('nan')
+    finally:
+        seterr(**old_settings)
 
 
 def recall(contingency_table):
@@ -126,7 +137,18 @@ def recall(contingency_table):
        ----------------+----------------
        false_negatives | true_positives
     """
-    return contingency_table[1, 1] / float(contingency_table.sum(axis=1)[1])
+    old_settings = seterr(invalid='raise')
+    try:
+        return contingency_table[1, 1] / float(
+            contingency_table.sum(axis=1)[1])
+    except FloatingPointError as e:
+        if float(contingency_table.sum(axis=1)[1]) < 1:
+            debug('division by zero avoided, return Nan', min_level=2)
+        else:
+            debug(str(e), min_level=2)
+        return float('nan')
+    finally:
+        seterr(**old_settings)
 
 
 class Corpus(dict):
