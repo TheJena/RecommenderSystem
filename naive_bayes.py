@@ -22,10 +22,11 @@
 from argparse import ArgumentParser, FileType, RawDescriptionHelpFormatter
 from collections import Counter
 from html import unescape
+from math import log2
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-from numpy import array, log, power, quantile, seterr, sqrt, zeros
+from numpy import array, log, mean, power, quantile, seterr, sqrt, zeros
 from numpy.random import RandomState
 from os import environ
 from re import sub as regex_substitute
@@ -105,6 +106,24 @@ def get_X_y(user, preferences, corpus, scaling_coefficient):
 
 def info(msg=''):
     print(msg, file=stderr)
+
+
+def normalized_discount_cumulative_gain(rated_items, top_k_recommendations):
+    """compute accuracy of the top-k recommended items"""
+
+    user_mean_rate = round(5 * mean([round(rate) for _, rate in rated_items]))
+    rating = {asin: round(5 * rate) for asin, rate in rated_items}
+    for item, predicted_rating in top_k_recommendations:
+        if item not in rating:
+            rating[item] = user_mean_rate
+
+    discounted_cumulative_gain = float(
+        sum((pow(2, rating[item]) - 1) / log2(i + 2)  # because i starts from 0
+            for i, (item, _) in enumerate(top_k_recommendations)))
+    ideal_discounted_cumulative_gain = float(
+        sum((pow(2, 5) - 1) / log2(i + 2)  # because i starts from 0
+            for i, (item, _) in enumerate(top_k_recommendations)))
+    return discounted_cumulative_gain / ideal_discounted_cumulative_gain
 
 
 def precision(contingency_table):
@@ -622,7 +641,6 @@ for i, (user, preferences) in enumerate(
     never_seen_documents = sorted(
         set(corpus.documents).difference(
             set(rated_doc for rated_doc, rate in preferences)))
-    info(f' Recommended items for user {user} '.center(80, '=') + '\n')
     if args.threshold is None:
         # let us find the best recommendations in the whole corpus
         y_predicted = classifier.predict(
@@ -644,13 +662,19 @@ for i, (user, preferences) in enumerate(
                     corpus.vector_of(asin),
                 ]))[0]
         recommendations = recommendations.items()
-    for position, (item, rating) in enumerate(
-            sorted(
-                recommendations,
-                key=lambda t: t[1],  # sort by predicted rating
-                reverse=True)[:max(args.top_k)]):
-        rating /= float(args.scaling_factor)  # normalize predicted rating
-        info(f'{position:>4d}) NaiveBayes(<item {item}>) {rating:>24.6f}')
+    top_k_recommendations = sorted(recommendations,
+                                   key=lambda t: t[1],
+                                   reverse=True)
+    for k in args.top_k:
+        info(f' Recommended items for user {user} '.center(80, '=') + '\n')
+        for position, (item, rating) in enumerate(top_k_recommendations[:k]):
+            rating /= float(args.scaling_factor)  # normalize predicted rating
+            info(f'{position:>4d}) NaiveBayes(<item {item}>) {rating:>24.6f}')
+
+        rated_items = dataset.training_set[user] + dataset.test_set[user]
+        ndcg = normalized_discount_cumulative_gain(rated_items,
+                                                   top_k_recommendations[:k])
+        info(f'\n{" " * 6}NDCG@{k}'.ljust(15) + f'{ndcg:>46.6f}\n')
 
     # validation
     X_test, y_real = get_X_y(user,
