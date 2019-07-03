@@ -553,12 +553,24 @@ parser.add_argument(
     '(default: 1000)',
     metavar='int',
     type=int)
+parser.add_argument(
+    '-t',
+    '--threshold',
+    default=None,
+    help='use a greedy approach and stop after the first top-k '
+    'suggestions above the threshold',
+    metavar='float',
+    type=float)
+
 args = parser.parse_args()
 
 if args.stop_after is not None and args.stop_after < 1:
     parser.error('-s/--stop-after must be greater than one')
 if args.scaling_factor < 5:
     parser.error('-a/--scaling-factor must be at least 5')
+if args.threshold is not None and (args.threshold <= 0.01
+                                   or args.threshold >= 0.99):
+    parser.error('-t/--threshold must be in (0.01, 0.99)')
 
 try:
     # ensure all the k are positive integers sorted by decreasing values
@@ -588,14 +600,34 @@ for i, (user, preferences) in enumerate(
     never_seen_documents = sorted(
         set(corpus.documents).difference(
             set(rated_doc for rated_doc, rate in preferences)))
-    y_predicted = classifier.predict(
-        csr_matrix([corpus.vector_of(asin) for asin in never_seen_documents]))
     info(f' Recommended items for user {user} '.center(80, '=') + '\n')
+    if args.threshold is None:
+        # let us find the best recommendations in the whole corpus
+        y_predicted = classifier.predict(
+            csr_matrix(
+                [corpus.vector_of(asin) for asin in never_seen_documents]))
+        recommendations = zip(never_seen_documents, list(y_predicted))
+    else:
+        # let us find only the first top-k recommendations above the
+        # threshold, which is in (0.01, 0.99)
+        recommendations = dict()
+        for asin in never_seen_documents:
+            if len([
+                    rating for rating in recommendations.values()
+                    if rating >= args.threshold * args.scaling_factor
+            ]) >= max(args.top_k):
+                break
+            recommendations[asin] = classifier.predict(
+                csr_matrix([
+                    corpus.vector_of(asin),
+                ]))[0]
+        recommendations = recommendations.items()
     for position, (item, rating) in enumerate(
-            sorted(zip(never_seen_documents, list(y_predicted)),
-                   key=lambda t: t[1],  # sort by predicted rating
-                   reverse=True)[:max(args.top_k)]):
-        rating /= float(args.scaling_factor)
+            sorted(
+                recommendations,
+                key=lambda t: t[1],  # sort by predicted rating
+                reverse=True)[:max(args.top_k)]):
+        rating /= float(args.scaling_factor)  # normalize predicted rating
         info(f'{position:>4d}) NaiveBayes(<item {item}>) {rating:>24.6f}')
 
     # validation
