@@ -19,7 +19,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from argparse import ArgumentParser, FileType, RawDescriptionHelpFormatter
+from argparse import ArgumentParser, FileType, RawDescriptionHelpFormatter, SUPPRESS
 from collections import Counter
 from html import unescape
 from math import log2
@@ -32,7 +32,7 @@ from os import environ
 from re import sub as regex_substitute
 from scipy.sparse import csr_matrix, lil_matrix
 from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit
 from sklearn.naive_bayes import MultinomialNB as MultinomialNaiveBayes
 from sys import stderr, version_info
 from string import punctuation
@@ -488,10 +488,15 @@ class Dataset(dict):
 
             x, y = zip(*data)  # x == asin; y == star
             x = array(x)
-            train_idx, test_idx = next(  # use a stratified random sampling
-                StratifiedShuffleSplit(
-                    n_splits=2, test_size=1 / 10, random_state=0).split(
-                        x, array([j >= top_quartile for j in y])))
+            if args.random:
+                random_sampling = ShuffleSplit
+            else:
+                random_sampling = StratifiedShuffleSplit
+            train_idx, test_idx = next(
+                random_sampling(n_splits=2,
+                                test_size=args.test_set_size,
+                                random_state=0).split(
+                                    x, array([j > top_quartile for j in y])))
             y = array(y)
             self['training_set'][user] = list(zip(x[train_idx], y[train_idx]))
             self['test_set'][user] = list(zip(x[test_idx], y[test_idx]))
@@ -574,6 +579,7 @@ parser.add_argument(
     default=0,
     dest='loglevel',
     help='print verbose messages (multiple -v increase verbosty)\n')
+parser.add_argument('--random', action='store_true', help=SUPPRESS)
 parser.add_argument('-s',
                     '--stop-after',
                     default=None,
@@ -581,6 +587,12 @@ parser.add_argument('-s',
                     'certain number of users',
                     metavar='int',
                     type=int)
+parser.add_argument('--test-set-size',
+                    default=0.1,
+                    help='percentage of the ratings to put in the test set '
+                    '(default: 0.10)',
+                    metavar='float',
+                    type=float)
 parser.add_argument('-q',
                     '--quantile-threshold',
                     default=0.75,  # 4 / 5 # 4 stars out of 5
@@ -619,6 +631,8 @@ if args.scaling_factor < 5:
     parser.error('-a/--scaling-factor must be at least 5')
 if args.quantile_threshold < 0.01 or args.quantile_threshold > 0.99:
     parser.error('-q/--quantile-threshold must be in (0.01, 0.99)')
+if args.test_set_size < 1 / 30 or args.test_set_size > 29 / 30:
+    parser.error(f'--test-set-size must be in ({1/30:.2f}, {29/30:.2f})')
 if args.threshold is not None and (args.threshold <= 0.01
                                    or args.threshold >= 0.99):
     parser.error('-t/--threshold must be in (0.01, 0.99)')
