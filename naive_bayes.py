@@ -649,7 +649,7 @@ except ValueError as e:
 dataset = Dataset(args.input)
 corpus = Corpus(dataset)
 
-
+results = dict()  # collects results to save on output file
 contingency_table = zeros((2, 2))
 for i, (user, preferences) in enumerate(
         sorted(dataset.training_set.items(), key=lambda t: t[0])):
@@ -660,6 +660,9 @@ for i, (user, preferences) in enumerate(
     classifier = MultinomialNaiveBayes()
     classifier.fit(*get_X_y(
         user, preferences, corpus, scaling_coefficient=args.scaling_factor))
+
+    if user not in results:
+        results[user] = dict(ranking=dict(), ndcg=dict())
 
     # prediction
     never_seen_documents = sorted(
@@ -694,11 +697,15 @@ for i, (user, preferences) in enumerate(
         for position, (item, rating) in enumerate(top_k_recommendations[:k]):
             rating /= float(args.scaling_factor)  # normalize predicted rating
             info(f'{position:>4d}) NaiveBayes(<item {item}>) {rating:>24.6f}')
+            if position not in results[user]['ranking']:
+                results[user]['ranking'][position] = dict(item=item,
+                                                          rating=float(rating))
 
         rated_items = dataset.training_set[user] + dataset.test_set[user]
         ndcg = normalized_discount_cumulative_gain(rated_items,
                                                    top_k_recommendations[:k])
         info(f'\n{" " * 6}NDCG@{k}'.ljust(15) + f'{ndcg:>46.6f}\n')
+        results[user]['ndcg'][k] = ndcg
 
     # validation
     X_test, y_real = get_X_y(user,
@@ -710,6 +717,18 @@ for i, (user, preferences) in enumerate(
     contingency_table += confusion_matrix(
         boolean_array(y_real, top_quartile),
         boolean_array(y_predicted, top_quartile))
+
+# for each k compute the mean of all user's ndcg@k
+ndcg_mean = {
+    k: float(mean([user_data['ndcg'][k] for _, user_data in results.items()]))
+    for k in args.top_k
+}
+
+# and write it also on stdout
+info(' Mean NDCG@K '.center(80, '=') + '\n')
+for k in reversed(args.top_k):
+    info(f'{" " *6}NDCG@{k}'.ljust(15) + f'{ndcg_mean[k]:>46.6f}')
+info()
 
 info(ascii_confusion_matrix(contingency_table) + '\n')
 info(f'accuracy:  {accuracy(contingency_table):8.3f}')
