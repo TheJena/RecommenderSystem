@@ -482,7 +482,8 @@ class Dataset(dict):
         self['test_set'] = dict()
         self['training_set'] = dict()
         for user, data in self['users'].items():
-            top_quartile = quantile(a=[star for _, star in data], q=0.75)
+            top_quartile = quantile(a=[star for _, star in data],
+                                    q=args.quantile_threshold)
             self['top_quartile'][user] = top_quartile
 
             x, y = zip(*data)  # x == asin; y == star
@@ -580,6 +581,13 @@ parser.add_argument('-s',
                     'certain number of users',
                     metavar='int',
                     type=int)
+parser.add_argument('-q',
+                    '--quantile-threshold',
+                    default=0.75,  # 4 / 5 # 4 stars out of 5
+                    help='consider as liked items with a rating above this '
+                    f'quantile threshold (default: 0.75)',
+                    metavar='float',
+                    type=float)
 parser.add_argument('-k',
                     '--top-k',
                     action='append',
@@ -609,6 +617,8 @@ if args.stop_after is not None and args.stop_after < 1:
     parser.error('-s/--stop-after must be greater than one')
 if args.scaling_factor < 5:
     parser.error('-a/--scaling-factor must be at least 5')
+if args.quantile_threshold < 0.01 or args.quantile_threshold > 0.99:
+    parser.error('-q/--quantile-threshold must be in (0.01, 0.99)')
 if args.threshold is not None and (args.threshold <= 0.01
                                    or args.threshold >= 0.99):
     parser.error('-t/--threshold must be in (0.01, 0.99)')
