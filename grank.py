@@ -961,7 +961,7 @@ for _ in range(args.parallel):  # loop until all workers finish their job
         for position, (item, gr) in enumerate(top_k_ranking):
             stderr_buff += f'{position:>4d}) GR(<item {item}>) {gr:>32.6f}\n'
             if position not in results[user]['ranking']:
-                results[user]['ranking'][position] = dict(item=item, gr=gr)
+                results[user]['ranking'][position] = dict(item=item, rating=gr)
         stderr_buff += f'\n{" " * 6}NDCG@{k}'.ljust(15) + f'{ndcg:>46.6f}\n\n'
 
         results[user]['ndcg'][k] = ndcg

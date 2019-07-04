@@ -34,7 +34,7 @@ from scipy.sparse import csr_matrix, lil_matrix
 from sklearn.metrics import confusion_matrix
 from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit
 from sklearn.naive_bayes import MultinomialNB as MultinomialNaiveBayes
-from sys import stderr, version_info
+from sys import stderr, stdout, version_info
 from string import punctuation
 from tabulate import tabulate
 import json
@@ -550,6 +550,14 @@ if str(environ.get('PYTHONHASHSEED', 'unset')) != '0':
     raise SystemExit('Please set environment variable PYTHONHASHSEED '
                      'to 0 (zero) to have reproducible results')
 
+try:
+    # use the Dumper from the compiled C library (if present)
+    # because it is faster than the one for the python iterpreter
+    yaml_dumper = yaml.CDumper
+except AttributeError:
+    yaml_dumper = yaml.Dumper  # fallback interpreted and slower Dumper
+yaml_kwargs = dict(Dumper=yaml_dumper, default_flow_style=False)
+
 parser = ArgumentParser(description='\n\t'.join(
     ('', 'Apply the content-based approach called Naive Bayes to a dataset',
      'of Amazon reviews.', '',
@@ -580,6 +588,10 @@ parser.add_argument(
     dest='loglevel',
     help='print verbose messages (multiple -v increase verbosty)\n')
 parser.add_argument('--random', action='store_true', help=SUPPRESS)
+parser.add_argument('--confusion-matrix',
+                    default=None,
+                    help=SUPPRESS,
+                    type=FileType('w'))
 parser.add_argument('-s',
                     '--stop-after',
                     default=None,
@@ -600,6 +612,12 @@ parser.add_argument('-q',
                     f'quantile threshold (default: 0.75)',
                     metavar='float',
                     type=float)
+parser.add_argument('-o',
+                    '--output',
+                    default=None,
+                    help='print script results on output file',
+                    metavar='output_file',
+                    type=FileType('w'))
 parser.add_argument('-k',
                     '--top-k',
                     action='append',
@@ -648,6 +666,27 @@ except ValueError as e:
 
 dataset = Dataset(args.input)
 corpus = Corpus(dataset)
+
+# write command line arguments to output file (improves reproducibility)
+output_header = ' Command Line Arguments '.center(80, '#') + '\n'
+output_header += yaml.dump(
+    {
+        'args.input': args.input.name,
+        'args.only_new': True,
+        'args.output': getattr(args.output, 'name', None),
+        'args.quantile_threshold': args.quantile_threshold,
+        'args.scaling_factor': args.scaling_factor,
+        'args.stop_after': args.stop_after,
+        'args.test_set_size': args.test_set_size,
+        'args.threshold': args.threshold,
+        'args.top_k': args.top_k,
+    }, **yaml_kwargs)
+output_header += ' Results '.center(80, '#') + '\n'
+if args.output is not None:
+    args.output.write(output_header)
+    args.output.flush()
+    if args.output != stdout:
+        args.output.close()  # close output file if != stdout
 
 results = dict()  # collects results to save on output file
 contingency_table = zeros((2, 2))
@@ -707,6 +746,11 @@ for i, (user, preferences) in enumerate(
         info(f'\n{" " * 6}NDCG@{k}'.ljust(15) + f'{ndcg:>46.6f}\n')
         results[user]['ndcg'][k] = ndcg
 
+    # rewrite output file with also this user results
+    if args.output is not None and args.output != stdout:
+        with open(args.output.name, 'w') as f:
+            f.write(output_header + yaml.dump(results, **yaml_kwargs))
+
     # validation
     X_test, y_real = get_X_y(user,
                              dataset.test_set[user],
@@ -723,6 +767,23 @@ ndcg_mean = {
     k: float(mean([user_data['ndcg'][k] for _, user_data in results.items()]))
     for k in args.top_k
 }
+# then rewrite output file with also this piece of information (ndcg mean)
+if args.output is not None and args.output != stdout:
+    with open(args.output.name, 'w') as f:
+        f.write(output_header + yaml.dump(results, **yaml_kwargs) +
+                ' Mean NDCG@K '.center(80, '#') + '\n' +
+                yaml.dump(ndcg_mean, **yaml_kwargs) +
+                ' Confusion matrix '.center(80, '#') + '\n#' +
+                f'\n#{" " * 17}' + f'\n#{" " * 17}'.join(
+                    ascii_confusion_matrix(contingency_table).split('\n')[1:]))
+
+if args.confusion_matrix is not None:
+    args.confusion_matrix.write(
+        yaml.dump(
+            {
+                'args.input': args.input.name,
+                'confusion_matrix': contingency_table.tolist(),
+            }, **yaml_kwargs))
 
 # and write it also on stdout
 info(' Mean NDCG@K '.center(80, '=') + '\n')
