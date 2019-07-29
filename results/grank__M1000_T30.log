@@ -1,0 +1,1800 @@
+Successfully loaded dataset from dataset/M1000_T30.json
+
+Dataset specs:
+    n° users                               1000 (both training and test set)
+    n° items                               6125 (both training and test set)
+    n° reviews                            20000 (only training          set)
+
+Tripartite Graph specs:
+    n° nodes:                          37522750
+    ├── U (users)                          1000 (both training and test set)
+    ├── P (preferences)                37509500 (only training          set)
+    └── R (representatives)               12250 (both training and test set)
+    n° edges:                          75130071
+    ├── f: U x P -> {0, 1}               111071 (agreement function)
+    └── s: P x R -> {0, 1}             75019000 (support   function)
+
+GRank specs:
+    max iterations                           20
+    threshold                                 0.0001
+    alpha                                     0.85
+
+Sparse transition matrix T specs:
+    n° of non zero elements                  150260142
+    n° of all elements                1407956767562500
+    density                                          1.07e-07
+    size in ram                                      4.88  mb
+
+============== Computing recommendations for user A10IKHRUSMKP46 ===============
+
+(iteration    1/20  )    norm(PPR(t) - PPR(t-1)):    0.150000020
+(iteration    2/20  )    norm(PPR(t) - PPR(t-1)):    0.486754790
+(iteration    3/20  )    norm(PPR(t) - PPR(t-1)):    0.035685341
+(iteration    4/20  )    norm(PPR(t) - PPR(t-1)):    0.116723212
+(iteration    5/20  )    norm(PPR(t) - PPR(t-1)):    0.008525949
+(iteration    6/20  )    norm(PPR(t) - PPR(t-1)):    0.028643293
+(iteration    7/20  )    norm(PPR(t) - PPR(t-1)):    0.002050207
+(iteration    8/20  )    norm(PPR(t) - PPR(t-1)):    0.007375559
+(iteration    9/20  )    norm(PPR(t) - PPR(t-1)):    0.000497976
+(iteration   10/20  )    norm(PPR(t) - PPR(t-1)):    0.002074621
+(iteration   11/20  )    norm(PPR(t) - PPR(t-1)):    0.000122996
+(iteration   12/20  )    norm(PPR(t) - PPR(t-1)):    0.000677575
+(iteration   13/20  )    norm(PPR(t) - PPR(t-1)):    0.000031484
+
+================== Recommended items for user A119Q9NFGVOEJZ ===================
+
+   0) GR(<item B0002IWYGS>)                         0.744476
+   1) GR(<item B0000A1OG4>)                         0.742010
+   2) GR(<item B0016B28Y8>)                         0.738751
+   3) GR(<item B001TORSHO>)                         0.738699
+   4) GR(<item 0060894083>)                         0.738383
+   5) GR(<item B00009ECGI>)                         0.738046
+   6) GR(<item 0062284398>)                         0.737042
+   7) GR(<item B00009OY9U>)                         0.733936
+   8) GR(<item 0062020889>)                         0.733583
+   9) GR(<item 0062314254>)                         0.732987
+
+      NDCG@10                                       1.000000
+
+================== Recommended items for user A119Q9NFGVOEJZ ===================
+
+   0) GR(<item B0002IWYGS>)                         0.744476
+   1) GR(<item B0000A1OG4>)                         0.742010
+   2) GR(<item B0016B28Y8>)                         0.738751
+   3) GR(<item B001TORSHO>)                         0.738699
+   4) GR(<item 0060894083>)                         0.738383
+
+      NDCG@5                                        1.000000
+
+================== Recommended items for user A119Q9NFGVOEJZ ===================
+
+   0) GR(<item B0002IWYGS>)                         0.744476
+   1) GR(<item B0000A1OG4>)                         0.742010
+   2) GR(<item B0016B28Y8>)                         0.738751
+
+      NDCG@3                                        1.000000
+
+================== Recommended items for user A10XN3J1JEXLTJ ===================
+
+   0) GR(<item 0064406970>)                         0.909367
+   1) GR(<item 0061985848>)                         0.882910
+   2) GR(<item 0062020560>)                         0.880612
+   3) GR(<item 0061953407>)                         0.876636
+   4) GR(<item 0062103733>)                         0.860598
+   5) GR(<item B0038MTE7C>)                         0.860597
+   6) GR(<item 0060813040>)                         0.848127
+   7) GR(<item 0060760907>)                         0.848126
+   8) GR(<item 0061138061>)                         0.846872
+   9) GR(<item 0062117378>)                         0.832616
+
+      NDCG@10                                       0.664697
+
+================== Recommended items for user A10XN3J1JEXLTJ ===================
+
+   0) GR(<item 0064406970>)                         0.909367
+   1) GR(<item 0061985848>)                         0.882910
+   2) GR(<item 0062020560>)                         0.880612
+   3) GR(<item 0061953407>)                         0.876636
+   4) GR(<item 0062103733>)                         0.860598
+
+      NDCG@5                                        0.664697
+
+================== Recommended items for user A10XN3J1JEXLTJ ===================
+
+   0) GR(<item 0064406970>)                         0.909367
+   1) GR(<item 0061985848>)                         0.882910
+   2) GR(<item 0062020560>)                         0.880612
+
+      NDCG@3                                        0.664697
+
+================== Recommended items for user A11I1I9QLMAM1A ===================
+
+   0) GR(<item 0060898917>)                         0.864646
+   1) GR(<item 0060298480>)                         0.863246
+   2) GR(<item 006009334X>)                         0.863180
+   3) GR(<item 006201451X>)                         0.861789
+   4) GR(<item 0062333038>)                         0.861730
+   5) GR(<item 0002219417>)                         0.859995
+   6) GR(<item 0099496941>)                         0.859857
+   7) GR(<item 0062026518>)                         0.848180
+   8) GR(<item 006197806X>)                         0.842750
+   9) GR(<item B0038MTE7C>)                         0.840028
+
+      NDCG@10                                       0.560619
+
+================== Recommended items for user A11I1I9QLMAM1A ===================
+
+   0) GR(<item 0060898917>)                         0.864646
+   1) GR(<item 0060298480>)                         0.863246
+   2) GR(<item 006009334X>)                         0.863180
+   3) GR(<item 006201451X>)                         0.861789
+   4) GR(<item 0062333038>)                         0.861730
+
+      NDCG@5                                        0.560619
+
+================== Recommended items for user A11I1I9QLMAM1A ===================
+
+   0) GR(<item 0060898917>)                         0.864646
+   1) GR(<item 0060298480>)                         0.863246
+   2) GR(<item 006009334X>)                         0.863180
+
+      NDCG@3                                        0.560619
+
+================== Recommended items for user A10L7QIDE9UF11 ===================
+
+   0) GR(<item 0062107763>)                         0.507872
+   1) GR(<item 0061958069>)                         0.507449
+   2) GR(<item 006111846X>)                         0.507096
+   3) GR(<item 006172081X>)                         0.506320
+   4) GR(<item 0061667854>)                         0.506013
+   5) GR(<item 0060762993>)                         0.505586
+   6) GR(<item 0061229695>)                         0.505383
+   7) GR(<item 0061474312>)                         0.505345
+   8) GR(<item 0061259357>)                         0.505150
+   9) GR(<item 0062021281>)                         0.505050
+
+      NDCG@10                                       0.953385
+
+================== Recommended items for user A10L7QIDE9UF11 ===================
+
+   0) GR(<item 0062107763>)                         0.507872
+   1) GR(<item 0061958069>)                         0.507449
+   2) GR(<item 006111846X>)                         0.507096
+   3) GR(<item 006172081X>)                         0.506320
+   4) GR(<item 0061667854>)                         0.506013
+
+      NDCG@5                                        0.953385
+
+================== Recommended items for user A10L7QIDE9UF11 ===================
+
+   0) GR(<item 0062107763>)                         0.507872
+   1) GR(<item 0061958069>)                         0.507449
+   2) GR(<item 006111846X>)                         0.507096
+
+      NDCG@3                                        0.953385
+
+================== Recommended items for user A10IKHRUSMKP46 ===================
+
+   0) GR(<item 0062014552>)                         0.764670
+   1) GR(<item 0061701246>)                         0.717331
+   2) GR(<item 0061963739>)                         0.701269
+   3) GR(<item 0062065890>)                         0.691695
+   4) GR(<item 0060562382>)                         0.685830
+   5) GR(<item B003336KG4>)                         0.685821
+   6) GR(<item 0060742887>)                         0.683876
+   7) GR(<item 0062267337>)                         0.681169
+   8) GR(<item 0060874228>)                         0.680271
+   9) GR(<item B000FUWCRY>)                         0.680219
+
+      NDCG@10                                       0.574476
+
+================== Recommended items for user A10IKHRUSMKP46 ===================
+
+   0) GR(<item 0062014552>)                         0.764670
+   1) GR(<item 0061701246>)                         0.717331
+   2) GR(<item 0061963739>)                         0.701269
+   3) GR(<item 0062065890>)                         0.691695
+   4) GR(<item 0060562382>)                         0.685830
+
+      NDCG@5                                        0.574476
+
+================== Recommended items for user A10IKHRUSMKP46 ===================
+
+   0) GR(<item 0062014552>)                         0.764670
+   1) GR(<item 0061701246>)                         0.717331
+   2) GR(<item 0061963739>)                         0.701269
+
+      NDCG@3                                        0.574476
+
+================== Recommended items for user A10UUYDN5NY2GB ===================
+
+   0) GR(<item B0007UDYUQ>)                         0.772839
+   1) GR(<item B00030GS80>)                         0.771824
+   2) GR(<item B0001ZZNME>)                         0.771770
+   3) GR(<item B000GIXIPK>)                         0.771769
+   4) GR(<item B000BI3SIC>)                         0.771754
+   5) GR(<item B0009Z3K9E>)                         0.769037
+   6) GR(<item 0062100297>)                         0.504833
+   7) GR(<item B0000A0O28>)                         0.504642
+   8) GR(<item B00006LEM3>)                         0.503449
+   9) GR(<item B0007D4MVS>)                         0.503399
+
+      NDCG@10                                       0.574476
+
+============== Computing recommendations for user A11ON2OFCF6RTV ===============
+
+(iteration    1/20  )    norm(PPR(t) - PPR(t-1)):    0.150000015
+(iteration    2/20  )    norm(PPR(t) - PPR(t-1)):    0.477387642
+(iteration    3/20  )    norm(PPR(t) - PPR(t-1)):    0.035672778
+(iteration    4/20  )    norm(PPR(t) - PPR(t-1)):    0.114446839
+(iteration    5/20  )    norm(PPR(t) - PPR(t-1)):    0.008523679
+(iteration    6/20  )    norm(PPR(t) - PPR(t-1)):    0.028086570
+(iteration    7/20  )    norm(PPR(t) - PPR(t-1)):    0.002050723
+(iteration    8/20  )    norm(PPR(t) - PPR(t-1)):    0.007234242
+(iteration    9/20  )    norm(PPR(t) - PPR(t-1)):    0.000498573
+(iteration   10/20  )    norm(PPR(t) - PPR(t-1)):    0.002034779
+(iteration   11/20  )    norm(PPR(t) - PPR(t-1)):    0.000123305
+(iteration   12/20  )    norm(PPR(t) - PPR(t-1)):    0.000663148
+(iteration   13/20  )    norm(PPR(t) - PPR(t-1)):    0.000031595
+
+============== Computing recommendations for user A12IWE25EQHAL4 ===============
+
+(iteration    1/20  )    norm(PPR(t) - PPR(t-1)):    0.150000046
+(iteration    2/20  )    norm(PPR(t) - PPR(t-1)):    0.473293341
+(iteration    3/20  )    norm(PPR(t) - PPR(t-1)):    0.034565776
+(iteration    4/20  )    norm(PPR(t) - PPR(t-1)):    0.110072194
+(iteration    5/20  )    norm(PPR(t) - PPR(t-1)):    0.008033160
+(iteration    6/20  )    norm(PPR(t) - PPR(t-1)):    0.026349819
+(iteration    7/20  )    norm(PPR(t) - PPR(t-1)):    0.001887889
+(iteration    8/20  )    norm(PPR(t) - PPR(t-1)):    0.006688162
+(iteration    9/20  )    norm(PPR(t) - PPR(t-1)):    0.000450679
+(iteration   10/20  )    norm(PPR(t) - PPR(t-1)):    0.001884759
+(iteration   11/20  )    norm(PPR(t) - PPR(t-1)):    0.000110224
+(iteration   12/20  )    norm(PPR(t) - PPR(t-1)):    0.000628656
+(iteration   13/20  )    norm(PPR(t) - PPR(t-1)):    0.000028291
+
+============== Computing recommendations for user A13G1TKIKHGV3F ===============
+
+(iteration    1/20  )    norm(PPR(t) - PPR(t-1)):    0.150000021
+(iteration    2/20  )    norm(PPR(t) - PPR(t-1)):    0.425796005
+(iteration    3/20  )    norm(PPR(t) - PPR(t-1)):    0.035774250
+(iteration    4/20  )    norm(PPR(t) - PPR(t-1)):    0.102317616
+(iteration    5/20  )    norm(PPR(t) - PPR(t-1)):    0.008565475
+(iteration    6/20  )    norm(PPR(t) - PPR(t-1)):    0.025127778
+(iteration    7/20  )    norm(PPR(t) - PPR(t-1)):    0.002062977
+(iteration    8/20  )    norm(PPR(t) - PPR(t-1)):    0.006457608
+(iteration    9/20  )    norm(PPR(t) - PPR(t-1)):    0.000501378
+(iteration   10/20  )    norm(PPR(t) - PPR(t-1)):    0.001802648
+(iteration   11/20  )    norm(PPR(t) - PPR(t-1)):    0.000123651
+(iteration   12/20  )    norm(PPR(t) - PPR(t-1)):    0.000576604
+(iteration   13/20  )    norm(PPR(t) - PPR(t-1)):    0.000031405
+
+============== Computing recommendations for user A146H6A41B26QT ===============
+
+(iteration    1/20  )    norm(PPR(t) - PPR(t-1)):    0.150000058
+(iteration    2/20  )    norm(PPR(t) - PPR(t-1)):    0.437275279
+(iteration    3/20  )    norm(PPR(t) - PPR(t-1)):    0.034338435
+(iteration    4/20  )    norm(PPR(t) - PPR(t-1)):    0.101108890
+(iteration    5/20  )    norm(PPR(t) - PPR(t-1)):    0.007937773
+(iteration    6/20  )    norm(PPR(t) - PPR(t-1)):    0.024098127
+(iteration    7/20  )    norm(PPR(t) - PPR(t-1)):    0.001857986
+(iteration    8/20  )    norm(PPR(t) - PPR(t-1)):    0.006095890
+(iteration    9/20  )    norm(PPR(t) - PPR(t-1)):    0.000442319
+(iteration   10/20  )    norm(PPR(t) - PPR(t-1)):    0.001711431
+(iteration   11/20  )    norm(PPR(t) - PPR(t-1)):    0.000107964
+(iteration   12/20  )    norm(PPR(t) - PPR(t-1)):    0.000566149
+(iteration   13/20  )    norm(PPR(t) - PPR(t-1)):    0.000027607
+
+================== Recommended items for user A10UUYDN5NY2GB ===================
+
+   0) GR(<item B0007UDYUQ>)                         0.772839
+   1) GR(<item B00030GS80>)                         0.771824
+   2) GR(<item B0001ZZNME>)                         0.771770
+   3) GR(<item B000GIXIPK>)                         0.771769
+   4) GR(<item B000BI3SIC>)                         0.771754
+
+      NDCG@5                                        0.574476
+
+================== Recommended items for user A10UUYDN5NY2GB ===================
+
+   0) GR(<item B0007UDYUQ>)                         0.772839
+   1) GR(<item B00030GS80>)                         0.771824
+   2) GR(<item B0001ZZNME>)                         0.771770
+
+      NDCG@3                                        0.574476
+
+================== Recommended items for user A114TMHW9GRMPB ===================
+
+   0) GR(<item B00000DMB3>)                         0.835983
+   1) GR(<item B001UU1WN8>)                         0.831913
+   2) GR(<item B000JLIXIG>)                         0.802148
+   3) GR(<item B002CZ38KA>)                         0.729097
+   4) GR(<item B001TORSII>)                         0.721454
+   5) GR(<item B000X1PE16>)                         0.718549
+   6) GR(<item B001L8DKIE>)                         0.692767
+   7) GR(<item B000P297EI>)                         0.692196
+   8) GR(<item B002ACFYUM>)                         0.691940
+   9) GR(<item B000X1TC0U>)                         0.691892
+
+      NDCG@10                                       0.648778
+
+================== Recommended items for user A114TMHW9GRMPB ===================
+
+   0) GR(<item B00000DMB3>)                         0.835983
+   1) GR(<item B001UU1WN8>)                         0.831913
+   2) GR(<item B000JLIXIG>)                         0.802148
+   3) GR(<item B002CZ38KA>)                         0.729097
+   4) GR(<item B001TORSII>)                         0.721454
+
+      NDCG@5                                        0.648778
+
+============== Computing recommendations for user A15LG7HS4WKKKS ===============
+
+(iteration    1/20  )    norm(PPR(t) - PPR(t-1)):    0.150000018
+(iteration    2/20  )    norm(PPR(t) - PPR(t-1)):    0.221418417
+(iteration    3/20  )    norm(PPR(t) - PPR(t-1)):    0.030395213
+(iteration    4/20  )    norm(PPR(t) - PPR(t-1)):    0.046236196
+(iteration    5/20  )    norm(PPR(t) - PPR(t-1)):    0.006332624
+(iteration    6/20  )    norm(PPR(t) - PPR(t-1)):    0.010397763
+(iteration    7/20  )    norm(PPR(t) - PPR(t-1)):    0.001366251
+(iteration    8/20  )    norm(PPR(t) - PPR(t-1)):    0.002609258
+(iteration    9/20  )    norm(PPR(t) - PPR(t-1)):    0.000307435
+(iteration   10/20  )    norm(PPR(t) - PPR(t-1)):    0.000748047
+(iteration   11/20  )    norm(PPR(t) - PPR(t-1)):    0.000072699
+
+================== Recommended items for user A114TMHW9GRMPB ===================
+
+   0) GR(<item B00000DMB3>)                         0.835983
+   1) GR(<item B001UU1WN8>)                         0.831913
+   2) GR(<item B000JLIXIG>)                         0.802148
+
+      NDCG@3                                        0.648778
+
+================== Recommended items for user A11B61QBGHLQDN ===================
+
+   0) GR(<item 0062236679>)                         0.863442
+   1) GR(<item B000R4NFC4>)                         0.842398
+   2) GR(<item 0061878200>)                         0.841402
+   3) GR(<item 0060899190>)                         0.834226
+   4) GR(<item 0062213784>)                         0.779088
+   5) GR(<item 0061236225>)                         0.755426
+   6) GR(<item 0060256672>)                         0.754441
+   7) GR(<item 006087600X>)                         0.753788
+   8) GR(<item 0060730552>)                         0.753574
+   9) GR(<item 0061914177>)                         0.753416
+
+      NDCG@10                                       0.648778
+
+================== Recommended items for user A11B61QBGHLQDN ===================
+
+   0) GR(<item 0062236679>)                         0.863442
+   1) GR(<item B000R4NFC4>)                         0.842398
+   2) GR(<item 0061878200>)                         0.841402
+   3) GR(<item 0060899190>)                         0.834226
+   4) GR(<item 0062213784>)                         0.779088
+
+      NDCG@5                                        0.648778
+
+================== Recommended items for user A11B61QBGHLQDN ===================
+
+   0) GR(<item 0062236679>)                         0.863442
+   1) GR(<item B000R4NFC4>)                         0.842398
+   2) GR(<item 0061878200>)                         0.841402
+
+      NDCG@3                                        0.648778
+
+================== Recommended items for user A1143YEAZYMYHJ ===================
+
+   0) GR(<item 0060755784>)                         0.815988
+   1) GR(<item 0061458570>)                         0.810216
+   2) GR(<item B00002STGL>)                         0.781434
+   3) GR(<item B00006LELH>)                         0.781425
+   4) GR(<item B00004U5VF>)                         0.780752
+   5) GR(<item B00005O0I9>)                         0.774151
+   6) GR(<item B00005UK88>)                         0.769832
+   7) GR(<item B001EQPDOC>)                         0.729690
+   8) GR(<item 0062301705>)                         0.729669
+   9) GR(<item B0000ARQMZ>)                         0.729664
+
+      NDCG@10                                       0.633223
+
+================== Recommended items for user A1143YEAZYMYHJ ===================
+
+   0) GR(<item 0060755784>)                         0.815988
+   1) GR(<item 0061458570>)                         0.810216
+   2) GR(<item B00002STGL>)                         0.781434
+   3) GR(<item B00006LELH>)                         0.781425
+   4) GR(<item B00004U5VF>)                         0.780752
+
+      NDCG@5                                        0.633223
+
+================== Recommended items for user A1143YEAZYMYHJ ===================
+
+   0) GR(<item 0060755784>)                         0.815988
+   1) GR(<item 0061458570>)                         0.810216
+   2) GR(<item B00002STGL>)                         0.781434
+
+      NDCG@3                                        0.633223
+
+=================== Recommended items for user A11L3YX5WIDKJ ===================
+
+   0) GR(<item 0060788380>)                         0.936848
+   1) GR(<item B0038MTE7C>)                         0.904826
+   2) GR(<item 0006550436>)                         0.898787
+   3) GR(<item 0062026518>)                         0.897445
+   4) GR(<item 0061957933>)                         0.894138
+   5) GR(<item 0062333038>)                         0.867126
+   6) GR(<item 0061714305>)                         0.858046
+   7) GR(<item 0062304828>)                         0.854646
+   8) GR(<item B00005OARM>)                         0.842237
+   9) GR(<item B000IMYKQ0>)                         0.842196
+
+      NDCG@10                                       0.496195
+
+=================== Recommended items for user A11L3YX5WIDKJ ===================
+
+   0) GR(<item 0060788380>)                         0.936848
+   1) GR(<item B0038MTE7C>)                         0.904826
+   2) GR(<item 0006550436>)                         0.898787
+   3) GR(<item 0062026518>)                         0.897445
+   4) GR(<item 0061957933>)                         0.894138
+
+      NDCG@5                                        0.521561
+
+=================== Recommended items for user A11L3YX5WIDKJ ===================
+
+   0) GR(<item 0060788380>)                         0.936848
+   1) GR(<item B0038MTE7C>)                         0.904826
+   2) GR(<item 0006550436>)                         0.898787
+
+      NDCG@3                                        0.449307
+
+================== Recommended items for user A11LS12ZU93SV6 ===================
+
+   0) GR(<item B00004SVV8>)                         0.512106
+   1) GR(<item B00004SVV7>)                         0.511698
+   2) GR(<item B00005AV8W>)                         0.508207
+   3) GR(<item B000069BD9>)                         0.508088
+   4) GR(<item B00005NFN4>)                         0.507049
+   5) GR(<item B00004U5VI>)                         0.507036
+   6) GR(<item B00004YRVW>)                         0.506996
+   7) GR(<item B00000K2X5>)                         0.506977
+   8) GR(<item B00005V95R>)                         0.506936
+   9) GR(<item B00006LEM1>)                         0.506879
+
+      NDCG@10                                       0.292883
+
+================== Recommended items for user A11LS12ZU93SV6 ===================
+
+   0) GR(<item B00004SVV8>)                         0.512106
+   1) GR(<item B00004SVV7>)                         0.511698
+   2) GR(<item B00005AV8W>)                         0.508207
+   3) GR(<item B000069BD9>)                         0.508088
+   4) GR(<item B00005NFN4>)                         0.507049
+
+      NDCG@5                                        0.292883
+
+================== Recommended items for user A11LS12ZU93SV6 ===================
+
+   0) GR(<item B00004SVV8>)                         0.512106
+   1) GR(<item B00004SVV7>)                         0.511698
+   2) GR(<item B00005AV8W>)                         0.508207
+
+      NDCG@3                                        0.292883
+
+================== Recommended items for user A11M98R135HMSY ===================
+
+   0) GR(<item 0061797081>)                         0.904203
+   1) GR(<item 0061000299>)                         0.674681
+   2) GR(<item 006135158X>)                         0.674625
+   3) GR(<item 0061130400>)                         0.674454
+   4) GR(<item 0061015601>)                         0.674376
+   5) GR(<item 0060527307>)                         0.674295
+   6) GR(<item 006136827X>)                         0.670863
+   7) GR(<item 0060822554>)                         0.642134
+   8) GR(<item 0060653205>)                         0.641903
+   9) GR(<item 0061233501>)                         0.641849
+
+      NDCG@10                                       0.495935
+
+================== Recommended items for user A11M98R135HMSY ===================
+
+   0) GR(<item 0061797081>)                         0.904203
+   1) GR(<item 0061000299>)                         0.674681
+   2) GR(<item 006135158X>)                         0.674625
+   3) GR(<item 0061130400>)                         0.674454
+   4) GR(<item 0061015601>)                         0.674376
+
+      NDCG@5                                        0.495935
+
+================== Recommended items for user A11M98R135HMSY ===================
+
+   0) GR(<item 0061797081>)                         0.904203
+   1) GR(<item 0061000299>)                         0.674681
+   2) GR(<item 006135158X>)                         0.674625
+
+      NDCG@3                                        0.495935
+
+=================== Recommended items for user A11NL2A0RDEGF ===================
+
+   0) GR(<item 000766141X>)                         0.856751
+   1) GR(<item 0006514006>)                         0.856019
+   2) GR(<item 0060591854>)                         0.854807
+   3) GR(<item 0099282194>)                         0.849418
+   4) GR(<item 0060852577>)                         0.848345
+   5) GR(<item 0060838728>)                         0.838179
+   6) GR(<item 0099429799>)                         0.823355
+   7) GR(<item 006075995X>)                         0.805648
+   8) GR(<item 0060738871>)                         0.791747
+   9) GR(<item 0060758287>)                         0.790891
+
+      NDCG@10                                       0.613219
+
+=================== Recommended items for user A11NL2A0RDEGF ===================
+
+   0) GR(<item 000766141X>)                         0.856751
+   1) GR(<item 0006514006>)                         0.856019
+   2) GR(<item 0060591854>)                         0.854807
+   3) GR(<item 0099282194>)                         0.849418
+   4) GR(<item 0060852577>)                         0.848345
+
+      NDCG@5                                        0.588658
+
+=================== Recommended items for user A11NL2A0RDEGF ===================
+
+   0) GR(<item 000766141X>)                         0.856751
+   1) GR(<item 0006514006>)                         0.856019
+   2) GR(<item 0060591854>)                         0.854807
+
+      NDCG@3                                        0.588658
+
+================== Recommended items for user A11ON2OFCF6RTV ===================
+
+   0) GR(<item 0060192119>)                         0.803374
+   1) GR(<item 0060593083>)                         0.778990
+   2) GR(<item 0060273224>)                         0.776195
+   3) GR(<item 0030565812>)                         0.775896
+   4) GR(<item 0099526832>)                         0.771557
+   5) GR(<item 0061689246>)                         0.770714
+   6) GR(<item 0060007192>)                         0.707962
+   7) GR(<item 0061059064>)                         0.701627
+   8) GR(<item 0061020400>)                         0.701185
+   9) GR(<item 0060218053>)                         0.699723
+
+      NDCG@10                                       0.473380
+
+================== Recommended items for user A11ON2OFCF6RTV ===================
+
+   0) GR(<item 0060192119>)                         0.803374
+   1) GR(<item 0060593083>)                         0.778990
+   2) GR(<item 0060273224>)                         0.776195
+   3) GR(<item 0030565812>)                         0.775896
+   4) GR(<item 0099526832>)                         0.771557
+
+      NDCG@5                                        0.474082
+
+================== Recommended items for user A11ON2OFCF6RTV ===================
+
+   0) GR(<item 0060192119>)                         0.803374
+   1) GR(<item 0060593083>)                         0.778990
+   2) GR(<item 0060273224>)                         0.776195
+
+      NDCG@3                                        0.474849
+
+================== Recommended items for user A11OTLEDSW8ZXD ===================
+
+   0) GR(<item 0062107968>)                         0.836044
+   1) GR(<item 0061958794>)                         0.835429
+   2) GR(<item 0061996572>)                         0.835425
+   3) GR(<item 006230755X>)                         0.832930
+   4) GR(<item 0062223704>)                         0.831805
+   5) GR(<item 006170301X>)                         0.830948
+   6) GR(<item 006170363X>)                         0.787916
+   7) GR(<item 0061859362>)                         0.785460
+   8) GR(<item 0060930632>)                         0.785304
+   9) GR(<item 0007158505>)                         0.760333
+
+      NDCG@10                                       0.588658
+
+================== Recommended items for user A11OTLEDSW8ZXD ===================
+
+   0) GR(<item 0062107968>)                         0.836044
+   1) GR(<item 0061958794>)                         0.835429
+   2) GR(<item 0061996572>)                         0.835425
+   3) GR(<item 006230755X>)                         0.832930
+   4) GR(<item 0062223704>)                         0.831805
+
+      NDCG@5                                        0.588658
+
+================== Recommended items for user A11OTLEDSW8ZXD ===================
+
+   0) GR(<item 0062107968>)                         0.836044
+   1) GR(<item 0061958794>)                         0.835429
+   2) GR(<item 0061996572>)                         0.835425
+
+      NDCG@3                                        0.588658
+
+================== Recommended items for user A11XAIFA10G7TS ===================
+
+   0) GR(<item 0062220756>)                         0.833290
+   1) GR(<item 0061986461>)                         0.808307
+   2) GR(<item 0062194178>)                         0.800466
+   3) GR(<item 0062237187>)                         0.748611
+   4) GR(<item 0061003832>)                         0.732577
+   5) GR(<item 0062073575>)                         0.731414
+   6) GR(<item 0061962163>)                         0.731363
+   7) GR(<item B000X2RKOO>)                         0.720189
+   8) GR(<item 0060185481>)                         0.720165
+   9) GR(<item 0061779725>)                         0.718415
+
+      NDCG@10                                       0.560619
+
+================== Recommended items for user A11XAIFA10G7TS ===================
+
+   0) GR(<item 0062220756>)                         0.833290
+   1) GR(<item 0061986461>)                         0.808307
+   2) GR(<item 0062194178>)                         0.800466
+   3) GR(<item 0062237187>)                         0.748611
+   4) GR(<item 0061003832>)                         0.732577
+
+      NDCG@5                                        0.560619
+
+================== Recommended items for user A11XAIFA10G7TS ===================
+
+   0) GR(<item 0062220756>)                         0.833290
+   1) GR(<item 0061986461>)                         0.808307
+   2) GR(<item 0062194178>)                         0.800466
+
+      NDCG@3                                        0.560619
+
+================== Recommended items for user A11WBEK5XODYVM ===================
+
+   0) GR(<item 0060755806>)                         0.860184
+   1) GR(<item 0061876763>)                         0.828614
+   2) GR(<item 0060187271>)                         0.805999
+   3) GR(<item 0061536091>)                         0.799493
+   4) GR(<item 0061728608>)                         0.792870
+   5) GR(<item 0062331159>)                         0.792408
+   6) GR(<item 0062236679>)                         0.785641
+   7) GR(<item 0062236733>)                         0.779755
+   8) GR(<item 0061668214>)                         0.774399
+   9) GR(<item 0062201050>)                         0.712794
+
+      NDCG@10                                       0.366820
+
+================== Recommended items for user A11WBEK5XODYVM ===================
+
+   0) GR(<item 0060755806>)                         0.860184
+   1) GR(<item 0061876763>)                         0.828614
+   2) GR(<item 0060187271>)                         0.805999
+   3) GR(<item 0061536091>)                         0.799493
+   4) GR(<item 0061728608>)                         0.792870
+
+      NDCG@5                                        0.386969
+
+================== Recommended items for user A11WBEK5XODYVM ===================
+
+   0) GR(<item 0060755806>)                         0.860184
+   1) GR(<item 0061876763>)                         0.828614
+   2) GR(<item 0060187271>)                         0.805999
+
+      NDCG@3                                        0.386969
+
+================== Recommended items for user A126YLPKFPNQDS ===================
+
+   0) GR(<item 0060759836>)                         0.902986
+   1) GR(<item 0061957844>)                         0.883178
+   2) GR(<item 0061999164>)                         0.861522
+   3) GR(<item 0062209841>)                         0.858503
+   4) GR(<item 0062115391>)                         0.850921
+   5) GR(<item B0016B28WU>)                         0.840381
+   6) GR(<item B003L8HQ7S>)                         0.840334
+   7) GR(<item 0060545690>)                         0.840324
+   8) GR(<item 0060760907>)                         0.836961
+   9) GR(<item 0060813040>)                         0.836961
+
+      NDCG@10                                       0.664697
+
+================== Recommended items for user A126YLPKFPNQDS ===================
+
+   0) GR(<item 0060759836>)                         0.902986
+   1) GR(<item 0061957844>)                         0.883178
+   2) GR(<item 0061999164>)                         0.861522
+   3) GR(<item 0062209841>)                         0.858503
+   4) GR(<item 0062115391>)                         0.850921
+
+      NDCG@5                                        0.664697
+
+================== Recommended items for user A126YLPKFPNQDS ===================
+
+   0) GR(<item 0060759836>)                         0.902986
+   1) GR(<item 0061957844>)                         0.883178
+   2) GR(<item 0061999164>)                         0.861522
+
+      NDCG@3                                        0.664697
+
+================== Recommended items for user A11YV6VC51HJTV ===================
+
+   0) GR(<item 006091307X>)                         0.914470
+   1) GR(<item 0060502932>)                         0.911163
+   2) GR(<item 0061015725>)                         0.872969
+   3) GR(<item 0061721719>)                         0.844881
+   4) GR(<item B000TVT8PI>)                         0.844812
+   5) GR(<item 006074068X>)                         0.844568
+   6) GR(<item 0060545607>)                         0.826631
+   7) GR(<item 0061020702>)                         0.792144
+   8) GR(<item 0061054887>)                         0.778266
+   9) GR(<item 0060844094>)                         0.778221
+
+      NDCG@10                                       0.547077
+
+================== Recommended items for user A11YV6VC51HJTV ===================
+
+   0) GR(<item 006091307X>)                         0.914470
+   1) GR(<item 0060502932>)                         0.911163
+   2) GR(<item 0061015725>)                         0.872969
+   3) GR(<item 0061721719>)                         0.844881
+   4) GR(<item B000TVT8PI>)                         0.844812
+
+      NDCG@5                                        0.547077
+
+================== Recommended items for user A11YV6VC51HJTV ===================
+
+   0) GR(<item 006091307X>)                         0.914470
+   1) GR(<item 0060502932>)                         0.911163
+   2) GR(<item 0061015725>)                         0.872969
+
+      NDCG@3                                        0.547077
+
+================== Recommended items for user A126KX6FVI4T66 ===================
+
+   0) GR(<item 0061561029>)                         0.700140
+   1) GR(<item 0061144835>)                         0.698957
+   2) GR(<item 0064409635>)                         0.697003
+   3) GR(<item 0064440133>)                         0.696302
+   4) GR(<item 0061892351>)                         0.696300
+   5) GR(<item 0062116150>)                         0.696283
+   6) GR(<item 006028935X>)                         0.694428
+   7) GR(<item 0061999164>)                         0.688611
+   8) GR(<item 0062073605>)                         0.687716
+   9) GR(<item 0061733148>)                         0.687569
+
+      NDCG@10                                       0.292883
+
+================== Recommended items for user A126KX6FVI4T66 ===================
+
+   0) GR(<item 0061561029>)                         0.700140
+   1) GR(<item 0061144835>)                         0.698957
+   2) GR(<item 0064409635>)                         0.697003
+   3) GR(<item 0064440133>)                         0.696302
+   4) GR(<item 0061892351>)                         0.696300
+
+      NDCG@5                                        0.292883
+
+================== Recommended items for user A126KX6FVI4T66 ===================
+
+   0) GR(<item 0061561029>)                         0.700140
+   1) GR(<item 0061144835>)                         0.698957
+   2) GR(<item 0064409635>)                         0.697003
+
+      NDCG@3                                        0.292883
+
+================== Recommended items for user A12A08OL0TZY0W ===================
+
+   0) GR(<item 0061054887>)                         0.759415
+   1) GR(<item 0060576170>)                         0.758498
+   2) GR(<item 0060934905>)                         0.758458
+   3) GR(<item 003055442X>)                         0.758458
+   4) GR(<item 0099478420>)                         0.756293
+   5) GR(<item 0029146739>)                         0.699214
+   6) GR(<item 0060529148>)                         0.698638
+   7) GR(<item 0071446435>)                         0.698480
+   8) GR(<item 0060935936>)                         0.698471
+   9) GR(<item 0060855029>)                         0.698432
+
+      NDCG@10                                       0.714720
+
+================== Recommended items for user A12A08OL0TZY0W ===================
+
+   0) GR(<item 0061054887>)                         0.759415
+   1) GR(<item 0060576170>)                         0.758498
+   2) GR(<item 0060934905>)                         0.758458
+   3) GR(<item 003055442X>)                         0.758458
+   4) GR(<item 0099478420>)                         0.756293
+
+      NDCG@5                                        0.714720
+
+================== Recommended items for user A12A08OL0TZY0W ===================
+
+   0) GR(<item 0061054887>)                         0.759415
+   1) GR(<item 0060576170>)                         0.758498
+   2) GR(<item 0060934905>)                         0.758458
+
+      NDCG@3                                        0.714720
+
+================== Recommended items for user A12IWE25EQHAL4 ===================
+
+   0) GR(<item 0062088254>)                         0.899923
+   1) GR(<item 0061894443>)                         0.849486
+   2) GR(<item 0062236733>)                         0.829916
+   3) GR(<item 0061458570>)                         0.825720
+   4) GR(<item 0062206281>)                         0.824006
+   5) GR(<item 0061938343>)                         0.823618
+   6) GR(<item 0062198505>)                         0.822168
+   7) GR(<item 0060788380>)                         0.821001
+   8) GR(<item 0062116509>)                         0.812940
+   9) GR(<item 0061138061>)                         0.809025
+
+      NDCG@10                                       0.427561
+
+================== Recommended items for user A12IWE25EQHAL4 ===================
+
+   0) GR(<item 0062088254>)                         0.899923
+   1) GR(<item 0061894443>)                         0.849486
+   2) GR(<item 0062236733>)                         0.829916
+   3) GR(<item 0061458570>)                         0.825720
+   4) GR(<item 0062206281>)                         0.824006
+
+      NDCG@5                                        0.427561
+
+================== Recommended items for user A12IWE25EQHAL4 ===================
+
+   0) GR(<item 0062088254>)                         0.899923
+   1) GR(<item 0061894443>)                         0.849486
+   2) GR(<item 0062236733>)                         0.829916
+
+      NDCG@3                                        0.427561
+
+=================== Recommended items for user A12LH2100CKQO ===================
+
+   0) GR(<item B00002STNQ>)                         0.685530
+   1) GR(<item B000088KH3>)                         0.683116
+   2) GR(<item B00005RVN8>)                         0.681374
+   3) GR(<item B0000663TT>)                         0.678171
+   4) GR(<item B0000BVGOM>)                         0.674430
+   5) GR(<item B000A5K5MI>)                         0.674126
+   6) GR(<item B000B63RSA>)                         0.673519
+   7) GR(<item B0000D12XI>)                         0.672911
+   8) GR(<item B00008KTNW>)                         0.606310
+   9) GR(<item B00006IR62>)                         0.603929
+
+      NDCG@10                                       0.472083
+
+=================== Recommended items for user A12LH2100CKQO ===================
+
+   0) GR(<item B00002STNQ>)                         0.685530
+   1) GR(<item B000088KH3>)                         0.683116
+   2) GR(<item B00005RVN8>)                         0.681374
+   3) GR(<item B0000663TT>)                         0.678171
+   4) GR(<item B0000BVGOM>)                         0.674430
+
+      NDCG@5                                        0.472083
+
+=================== Recommended items for user A12LH2100CKQO ===================
+
+   0) GR(<item B00002STNQ>)                         0.685530
+   1) GR(<item B000088KH3>)                         0.683116
+   2) GR(<item B00005RVN8>)                         0.681374
+
+      NDCG@3                                        0.472083
+
+================== Recommended items for user A12WZTC4YJ8ZEC ===================
+
+   0) GR(<item B003ICGL7I>)                         0.743188
+   1) GR(<item B002V14VOC>)                         0.742999
+   2) GR(<item 0061020702>)                         0.742122
+   3) GR(<item 0060517573>)                         0.742064
+   4) GR(<item 0060557559>)                         0.741791
+   5) GR(<item B000PS2XDO>)                         0.741024
+   6) GR(<item B000PS4X7S>)                         0.740706
+   7) GR(<item B004PAGJMO>)                         0.740307
+   8) GR(<item B002BRYXRQ>)                         0.736914
+   9) GR(<item B000TTFLS8>)                         0.728828
+
+      NDCG@10                                       0.633223
+
+================== Recommended items for user A12WZTC4YJ8ZEC ===================
+
+   0) GR(<item B003ICGL7I>)                         0.743188
+   1) GR(<item B002V14VOC>)                         0.742999
+   2) GR(<item 0061020702>)                         0.742122
+   3) GR(<item 0060517573>)                         0.742064
+   4) GR(<item 0060557559>)                         0.741791
+
+      NDCG@5                                        0.633223
+
+================== Recommended items for user A12WZTC4YJ8ZEC ===================
+
+   0) GR(<item B003ICGL7I>)                         0.743188
+   1) GR(<item B002V14VOC>)                         0.742999
+   2) GR(<item 0061020702>)                         0.742122
+
+      NDCG@3                                        0.633223
+
+================== Recommended items for user A133ZC2Z8MAIED ===================
+
+   0) GR(<item 0061702587>)                         0.507153
+   1) GR(<item 0061336467>)                         0.506340
+   2) GR(<item 0099460254>)                         0.506292
+   3) GR(<item 0099448831>)                         0.506273
+   4) GR(<item 0061143448>)                         0.506044
+   5) GR(<item 0099460238>)                         0.505987
+   6) GR(<item 0061958867>)                         0.505957
+   7) GR(<item 0060193611>)                         0.505820
+   8) GR(<item 006230755X>)                         0.505738
+   9) GR(<item 006083482X>)                         0.505469
+
+      NDCG@10                                       0.574476
+
+================== Recommended items for user A133ZC2Z8MAIED ===================
+
+   0) GR(<item 0061702587>)                         0.507153
+   1) GR(<item 0061336467>)                         0.506340
+   2) GR(<item 0099460254>)                         0.506292
+   3) GR(<item 0099448831>)                         0.506273
+   4) GR(<item 0061143448>)                         0.506044
+
+      NDCG@5                                        0.574476
+
+================== Recommended items for user A133ZC2Z8MAIED ===================
+
+   0) GR(<item 0061702587>)                         0.507153
+   1) GR(<item 0061336467>)                         0.506340
+   2) GR(<item 0099460254>)                         0.506292
+
+      NDCG@3                                        0.574476
+
+================== Recommended items for user A136YD08SCJ2LV ===================
+
+   0) GR(<item 0062116924>)                         0.664432
+   1) GR(<item 0062003216>)                         0.664051
+   2) GR(<item 0060555971>)                         0.664046
+   3) GR(<item 0062293281>)                         0.664046
+   4) GR(<item 0061735329>)                         0.664046
+   5) GR(<item 0062136151>)                         0.664035
+   6) GR(<item 0062136747>)                         0.664035
+   7) GR(<item 0061730939>)                         0.664005
+   8) GR(<item 0060809779>)                         0.663993
+   9) GR(<item 0099519852>)                         0.652883
+
+      NDCG@10                                       0.664697
+
+================== Recommended items for user A136YD08SCJ2LV ===================
+
+   0) GR(<item 0062116924>)                         0.664432
+   1) GR(<item 0062003216>)                         0.664051
+   2) GR(<item 0060555971>)                         0.664046
+   3) GR(<item 0062293281>)                         0.664046
+   4) GR(<item 0061735329>)                         0.664046
+
+      NDCG@5                                        0.664697
+
+================== Recommended items for user A136YD08SCJ2LV ===================
+
+   0) GR(<item 0062116924>)                         0.664432
+   1) GR(<item 0062003216>)                         0.664051
+   2) GR(<item 0060555971>)                         0.664046
+
+      NDCG@3                                        0.664697
+
+================== Recommended items for user A138826JMC0J3T ===================
+
+   0) GR(<item B00004U5VF>)                         0.751673
+   1) GR(<item B0018KM6GM>)                         0.707803
+   2) GR(<item B0000D12XI>)                         0.703863
+   3) GR(<item B000053UJ2>)                         0.696220
+   4) GR(<item B0006B0O9U>)                         0.638975
+   5) GR(<item B000BU8YA2>)                         0.638636
+   6) GR(<item B000099T2H>)                         0.638486
+   7) GR(<item B00000DMAX>)                         0.636998
+   8) GR(<item B0008G2OWS>)                         0.636484
+   9) GR(<item B0001NE48U>)                         0.636161
+
+      NDCG@10                                       0.668131
+
+================== Recommended items for user A138826JMC0J3T ===================
+
+   0) GR(<item B00004U5VF>)                         0.751673
+   1) GR(<item B0018KM6GM>)                         0.707803
+   2) GR(<item B0000D12XI>)                         0.703863
+   3) GR(<item B000053UJ2>)                         0.696220
+   4) GR(<item B0006B0O9U>)                         0.638975
+
+      NDCG@5                                        0.718797
+
+================== Recommended items for user A138826JMC0J3T ===================
+
+   0) GR(<item B00004U5VF>)                         0.751673
+   1) GR(<item B0018KM6GM>)                         0.707803
+   2) GR(<item B0000D12XI>)                         0.703863
+
+      NDCG@3                                        0.774166
+
+================== Recommended items for user A13E0ARAXI6KJW ===================
+
+   0) GR(<item 0061547751>)                         0.803484
+   1) GR(<item 0060536357>)                         0.802034
+   2) GR(<item 0061195405>)                         0.765463
+   3) GR(<item 0060731583>)                         0.765282
+   4) GR(<item 0060976624>)                         0.765233
+   5) GR(<item 0060935936>)                         0.765187
+   6) GR(<item 006213115X>)                         0.765155
+   7) GR(<item 0060514957>)                         0.764708
+   8) GR(<item 0007162219>)                         0.760882
+   9) GR(<item 0099440687>)                         0.760811
+
+      NDCG@10                                       0.574476
+
+================== Recommended items for user A13E0ARAXI6KJW ===================
+
+   0) GR(<item 0061547751>)                         0.803484
+   1) GR(<item 0060536357>)                         0.802034
+   2) GR(<item 0061195405>)                         0.765463
+   3) GR(<item 0060731583>)                         0.765282
+   4) GR(<item 0060976624>)                         0.765233
+
+      NDCG@5                                        0.574476
+
+================== Recommended items for user A13E0ARAXI6KJW ===================
+
+   0) GR(<item 0061547751>)                         0.803484
+   1) GR(<item 0060536357>)                         0.802034
+   2) GR(<item 0061195405>)                         0.765463
+
+      NDCG@3                                        0.574476
+
+================== Recommended items for user A13FUIUSVR1315 ===================
+
+   0) GR(<item 0062085573>)                         0.866483
+   1) GR(<item 006201451X>)                         0.848335
+   2) GR(<item 0062114875>)                         0.833705
+   3) GR(<item 0062135120>)                         0.811045
+   4) GR(<item 0062273205>)                         0.811021
+   5) GR(<item 0061987514>)                         0.810689
+   6) GR(<item 006227306X>)                         0.804259
+   7) GR(<item 0062025724>)                         0.803668
+   8) GR(<item 0062199749>)                         0.803415
+   9) GR(<item 0062265970>)                         0.802973
+
+      NDCG@10                                       0.396768
+
+================== Recommended items for user A13FUIUSVR1315 ===================
+
+   0) GR(<item 0062085573>)                         0.866483
+   1) GR(<item 006201451X>)                         0.848335
+   2) GR(<item 0062114875>)                         0.833705
+   3) GR(<item 0062135120>)                         0.811045
+   4) GR(<item 0062273205>)                         0.811021
+
+      NDCG@5                                        0.396768
+
+================== Recommended items for user A13FUIUSVR1315 ===================
+
+   0) GR(<item 0062085573>)                         0.866483
+   1) GR(<item 006201451X>)                         0.848335
+   2) GR(<item 0062114875>)                         0.833705
+
+      NDCG@3                                        0.396768
+
+================== Recommended items for user A13G1TKIKHGV3F ===================
+
+   0) GR(<item 0061053562>)                         0.720767
+   1) GR(<item 006207993X>)                         0.717574
+   2) GR(<item 0060175966>)                         0.714976
+   3) GR(<item 0060892994>)                         0.710457
+   4) GR(<item 0061228591>)                         0.693749
+   5) GR(<item 0061731153>)                         0.693266
+   6) GR(<item 0061668214>)                         0.679396
+   7) GR(<item 0061727660>)                         0.679317
+   8) GR(<item 0061662550>)                         0.664692
+   9) GR(<item 0061020699>)                         0.662252
+
+      NDCG@10                                       0.560619
+
+================== Recommended items for user A13G1TKIKHGV3F ===================
+
+   0) GR(<item 0061053562>)                         0.720767
+   1) GR(<item 006207993X>)                         0.717574
+   2) GR(<item 0060175966>)                         0.714976
+   3) GR(<item 0060892994>)                         0.710457
+   4) GR(<item 0061228591>)                         0.693749
+
+      NDCG@5                                        0.560619
+
+================== Recommended items for user A13G1TKIKHGV3F ===================
+
+   0) GR(<item 0061053562>)                         0.720767
+   1) GR(<item 006207993X>)                         0.717574
+   2) GR(<item 0060175966>)                         0.714976
+
+      NDCG@3                                        0.560619
+
+================== Recommended items for user A13H5US9Z7L9M7 ===================
+
+   0) GR(<item 0061894443>)                         0.792166
+   1) GR(<item 0007388160>)                         0.778409
+   2) GR(<item 0061710245>)                         0.776858
+   3) GR(<item 0062285505>)                         0.765571
+   4) GR(<item 0062129902>)                         0.751115
+   5) GR(<item 0061905267>)                         0.750003
+   6) GR(<item 0060780649>)                         0.748659
+   7) GR(<item 0062284398>)                         0.744754
+   8) GR(<item 0061579084>)                         0.723523
+   9) GR(<item 0062107909>)                         0.723355
+
+      NDCG@10                                       0.366846
+
+================== Recommended items for user A13H5US9Z7L9M7 ===================
+
+   0) GR(<item 0061894443>)                         0.792166
+   1) GR(<item 0007388160>)                         0.778409
+   2) GR(<item 0061710245>)                         0.776858
+   3) GR(<item 0062285505>)                         0.765571
+   4) GR(<item 0062129902>)                         0.751115
+
+      NDCG@5                                        0.358895
+
+================== Recommended items for user A13H5US9Z7L9M7 ===================
+
+   0) GR(<item 0061894443>)                         0.792166
+   1) GR(<item 0007388160>)                         0.778409
+   2) GR(<item 0061710245>)                         0.776858
+
+      NDCG@3                                        0.358895
+
+================== Recommended items for user A13OFOB1394G31 ===================
+
+   0) GR(<item 0061433012>)                         0.912163
+   1) GR(<item 0060519134>)                         0.860753
+   2) GR(<item 0060566698>)                         0.857957
+   3) GR(<item 0060734574>)                         0.854212
+   4) GR(<item 0061020400>)                         0.821391
+   5) GR(<item 0060571993>)                         0.810593
+   6) GR(<item 0099282917>)                         0.801071
+   7) GR(<item 0061689246>)                         0.800799
+   8) GR(<item 0007136838>)                         0.797334
+   9) GR(<item 006440188X>)                         0.794875
+
+      NDCG@10                                       0.819652
+
+================== Recommended items for user A13OFOB1394G31 ===================
+
+   0) GR(<item 0061433012>)                         0.912163
+   1) GR(<item 0060519134>)                         0.860753
+   2) GR(<item 0060566698>)                         0.857957
+   3) GR(<item 0060734574>)                         0.854212
+   4) GR(<item 0061020400>)                         0.821391
+
+      NDCG@5                                        0.806196
+
+================== Recommended items for user A13OFOB1394G31 ===================
+
+   0) GR(<item 0061433012>)                         0.912163
+   1) GR(<item 0060519134>)                         0.860753
+   2) GR(<item 0060566698>)                         0.857957
+
+      NDCG@3                                        0.806196
+
+================== Recommended items for user A13Q1R1HIBPG6D ===================
+
+   0) GR(<item 0071592067>)                         0.679531
+   1) GR(<item 0071408673>)                         0.679531
+   2) GR(<item 0071592083>)                         0.679531
+   3) GR(<item 0071628916>)                         0.679530
+   4) GR(<item 0061128821>)                         0.679486
+   5) GR(<item 0071700579>)                         0.679486
+   6) GR(<item 0071769714>)                         0.679481
+   7) GR(<item 0071636080>)                         0.679474
+   8) GR(<item 0061964395>)                         0.679456
+   9) GR(<item 0132690136>)                         0.507000
+
+      NDCG@10                                       0.680987
+
+================== Recommended items for user A13Q1R1HIBPG6D ===================
+
+   0) GR(<item 0071592067>)                         0.679531
+   1) GR(<item 0071408673>)                         0.679531
+   2) GR(<item 0071592083>)                         0.679531
+   3) GR(<item 0071628916>)                         0.679530
+   4) GR(<item 0061128821>)                         0.679486
+
+      NDCG@5                                        0.680987
+
+================== Recommended items for user A13Q1R1HIBPG6D ===================
+
+   0) GR(<item 0071592067>)                         0.679531
+   1) GR(<item 0071408673>)                         0.679531
+   2) GR(<item 0071592083>)                         0.679531
+
+      NDCG@3                                        0.680987
+
+================== Recommended items for user A14OJS0VWMOSWO ===================
+
+   0) GR(<item 0061726834>)                         0.747730
+   1) GR(<item 0099401851>)                         0.746829
+   2) GR(<item 0060578785>)                         0.746665
+   3) GR(<item 0131988425>)                         0.746578
+   4) GR(<item B00009WAUL>)                         0.746253
+   5) GR(<item 0061375802>)                         0.744193
+   6) GR(<item B000GEDN5E>)                         0.741453
+   7) GR(<item B0007TFLLC>)                         0.741366
+   8) GR(<item 0099451751>)                         0.740958
+   9) GR(<item B00149TZ66>)                         0.740705
+
+      NDCG@10                                       1.000000
+
+================== Recommended items for user A14OJS0VWMOSWO ===================
+
+   0) GR(<item 0061726834>)                         0.747730
+   1) GR(<item 0099401851>)                         0.746829
+   2) GR(<item 0060578785>)                         0.746665
+   3) GR(<item 0131988425>)                         0.746578
+   4) GR(<item B00009WAUL>)                         0.746253
+
+      NDCG@5                                        1.000000
+
+================== Recommended items for user A14OJS0VWMOSWO ===================
+
+   0) GR(<item 0061726834>)                         0.747730
+   1) GR(<item 0099401851>)                         0.746829
+   2) GR(<item 0060578785>)                         0.746665
+
+      NDCG@3                                        1.000000
+
+================== Recommended items for user A13QTZ8CIMHHG4 ===================
+
+   0) GR(<item 0061351504>)                         0.829759
+   1) GR(<item 0061876763>)                         0.806776
+   2) GR(<item 0062223879>)                         0.801840
+   3) GR(<item 0062115391>)                         0.797053
+   4) GR(<item 0062107518>)                         0.794051
+   5) GR(<item 0062118072>)                         0.788793
+   6) GR(<item 0062118196>)                         0.779146
+   7) GR(<item 0062103733>)                         0.768137
+   8) GR(<item 0061583227>)                         0.767146
+   9) GR(<item 0062117378>)                         0.763954
+
+      NDCG@10                                       0.603171
+
+================== Recommended items for user A13QTZ8CIMHHG4 ===================
+
+   0) GR(<item 0061351504>)                         0.829759
+   1) GR(<item 0061876763>)                         0.806776
+   2) GR(<item 0062223879>)                         0.801840
+   3) GR(<item 0062115391>)                         0.797053
+   4) GR(<item 0062107518>)                         0.794051
+
+      NDCG@5                                        0.603171
+
+================== Recommended items for user A13QTZ8CIMHHG4 ===================
+
+   0) GR(<item 0061351504>)                         0.829759
+   1) GR(<item 0061876763>)                         0.806776
+   2) GR(<item 0062223879>)                         0.801840
+
+      NDCG@3                                        0.603171
+
+================== Recommended items for user A13Z96HR8EEF24 ===================
+
+   0) GR(<item 0060780649>)                         0.750817
+   1) GR(<item 0061233781>)                         0.740521
+   2) GR(<item 0060884266>)                         0.740250
+   3) GR(<item 006135158X>)                         0.702078
+   4) GR(<item 0061015601>)                         0.701800
+   5) GR(<item 0061000299>)                         0.701789
+   6) GR(<item 0060527307>)                         0.701720
+   7) GR(<item 0061130400>)                         0.700868
+   8) GR(<item 0061097853>)                         0.699564
+   9) GR(<item 006171951X>)                         0.695790
+
+      NDCG@10                                       0.396768
+
+================== Recommended items for user A13Z96HR8EEF24 ===================
+
+   0) GR(<item 0060780649>)                         0.750817
+   1) GR(<item 0061233781>)                         0.740521
+   2) GR(<item 0060884266>)                         0.740250
+   3) GR(<item 006135158X>)                         0.702078
+   4) GR(<item 0061015601>)                         0.701800
+
+      NDCG@5                                        0.396768
+
+================== Recommended items for user A13Z96HR8EEF24 ===================
+
+   0) GR(<item 0060780649>)                         0.750817
+   1) GR(<item 0061233781>)                         0.740521
+   2) GR(<item 0060884266>)                         0.740250
+
+      NDCG@3                                        0.396768
+
+================== Recommended items for user A140XH16IKR4B0 ===================
+
+   0) GR(<item 0060765313>)                         0.841878
+   1) GR(<item 0061628018>)                         0.817453
+   2) GR(<item 0062102419>)                         0.814708
+   3) GR(<item 0060555661>)                         0.814553
+   4) GR(<item 0062248472>)                         0.814523
+   5) GR(<item 009917961X>)                         0.770240
+   6) GR(<item 0061689246>)                         0.756264
+   7) GR(<item 0060188707>)                         0.753607
+   8) GR(<item 0062041282>)                         0.750548
+   9) GR(<item 0099496941>)                         0.744421
+
+      NDCG@10                                       0.588658
+
+================== Recommended items for user A140XH16IKR4B0 ===================
+
+   0) GR(<item 0060765313>)                         0.841878
+   1) GR(<item 0061628018>)                         0.817453
+   2) GR(<item 0062102419>)                         0.814708
+   3) GR(<item 0060555661>)                         0.814553
+   4) GR(<item 0062248472>)                         0.814523
+
+      NDCG@5                                        0.588658
+
+================== Recommended items for user A140XH16IKR4B0 ===================
+
+   0) GR(<item 0060765313>)                         0.841878
+   1) GR(<item 0061628018>)                         0.817453
+   2) GR(<item 0062102419>)                         0.814708
+
+      NDCG@3                                        0.588658
+
+================== Recommended items for user A146H6A41B26QT ===================
+
+   0) GR(<item 0099740915>)                         0.879111
+   1) GR(<item 0062041282>)                         0.859180
+   2) GR(<item 0061673234>)                         0.856904
+   3) GR(<item 0060391626>)                         0.856379
+   4) GR(<item 0060765313>)                         0.856320
+   5) GR(<item 006079156X>)                         0.856172
+   6) GR(<item 0099766817>)                         0.856104
+   7) GR(<item 0060755806>)                         0.855425
+   8) GR(<item 0062231707>)                         0.854957
+   9) GR(<item 006075995X>)                         0.854941
+
+      NDCG@10                                       0.667990
+
+================== Recommended items for user A146H6A41B26QT ===================
+
+   0) GR(<item 0099740915>)                         0.879111
+   1) GR(<item 0062041282>)                         0.859180
+   2) GR(<item 0061673234>)                         0.856904
+   3) GR(<item 0060391626>)                         0.856379
+   4) GR(<item 0060765313>)                         0.856320
+
+      NDCG@5                                        0.686798
+
+================== Recommended items for user A146H6A41B26QT ===================
+
+   0) GR(<item 0099740915>)                         0.879111
+   1) GR(<item 0062041282>)                         0.859180
+   2) GR(<item 0061673234>)                         0.856904
+
+      NDCG@3                                        0.633223
+
+================== Recommended items for user A143P0NKQDNWYL ===================
+
+   0) GR(<item B000ZK9QD2>)                         0.778364
+   1) GR(<item B000O5DS32>)                         0.765436
+   2) GR(<item B000XJNTPG>)                         0.762917
+   3) GR(<item 006124189X>)                         0.762785
+   4) GR(<item B000ZK6950>)                         0.760618
+   5) GR(<item B000QY9C90>)                         0.755178
+   6) GR(<item B00001X50M>)                         0.716860
+   7) GR(<item B00078W0BM>)                         0.700672
+   8) GR(<item B0000C6EB4>)                         0.700559
+   9) GR(<item B004N7HSGU>)                         0.671845
+
+      NDCG@10                                       0.483871
+
+================== Recommended items for user A143P0NKQDNWYL ===================
+
+   0) GR(<item B000ZK9QD2>)                         0.778364
+   1) GR(<item B000O5DS32>)                         0.765436
+   2) GR(<item B000XJNTPG>)                         0.762917
+   3) GR(<item 006124189X>)                         0.762785
+   4) GR(<item B000ZK6950>)                         0.760618
+
+      NDCG@5                                        0.483871
+
+================== Recommended items for user A143P0NKQDNWYL ===================
+
+   0) GR(<item B000ZK9QD2>)                         0.778364
+   1) GR(<item B000O5DS32>)                         0.765436
+   2) GR(<item B000XJNTPG>)                         0.762917
+
+      NDCG@3                                        0.483871
+
+================== Recommended items for user A14BTJRH9VNLJJ ===================
+
+   0) GR(<item 0060890312>)                         0.854855
+   1) GR(<item 0061020648>)                         0.835642
+   2) GR(<item 0060012382>)                         0.827399
+   3) GR(<item 009949308X>)                         0.806206
+   4) GR(<item 0020291922>)                         0.805199
+   5) GR(<item 0061779768>)                         0.804090
+   6) GR(<item 0060502932>)                         0.800693
+   7) GR(<item 006056668X>)                         0.794003
+   8) GR(<item 0060735449>)                         0.776925
+   9) GR(<item B005C2D2H4>)                         0.770042
+
+      NDCG@10                                       0.618024
+
+================== Recommended items for user A14BTJRH9VNLJJ ===================
+
+   0) GR(<item 0060890312>)                         0.854855
+   1) GR(<item 0061020648>)                         0.835642
+   2) GR(<item 0060012382>)                         0.827399
+   3) GR(<item 009949308X>)                         0.806206
+   4) GR(<item 0020291922>)                         0.805199
+
+      NDCG@5                                        0.618024
+
+================== Recommended items for user A14BTJRH9VNLJJ ===================
+
+   0) GR(<item 0060890312>)                         0.854855
+   1) GR(<item 0061020648>)                         0.835642
+   2) GR(<item 0060012382>)                         0.827399
+
+      NDCG@3                                        0.618024
+
+================== Recommended items for user A14I311IIUMBWC ===================
+
+   0) GR(<item 0060732067>)                         0.877716
+   1) GR(<item 0062133292>)                         0.876394
+   2) GR(<item 0062271377>)                         0.868996
+   3) GR(<item 0062107518>)                         0.854114
+   4) GR(<item 0062024604>)                         0.779070
+   5) GR(<item 006188569X>)                         0.761341
+   6) GR(<item 0062118072>)                         0.755592
+   7) GR(<item 0061433012>)                         0.722536
+   8) GR(<item 0062018965>)                         0.720879
+   9) GR(<item 0062292927>)                         0.720513
+
+      NDCG@10                                       0.574476
+
+================== Recommended items for user A14I311IIUMBWC ===================
+
+   0) GR(<item 0060732067>)                         0.877716
+   1) GR(<item 0062133292>)                         0.876394
+   2) GR(<item 0062271377>)                         0.868996
+   3) GR(<item 0062107518>)                         0.854114
+   4) GR(<item 0062024604>)                         0.779070
+
+      NDCG@5                                        0.574476
+
+================== Recommended items for user A14I311IIUMBWC ===================
+
+   0) GR(<item 0060732067>)                         0.877716
+   1) GR(<item 0062133292>)                         0.876394
+   2) GR(<item 0062271377>)                         0.868996
+
+      NDCG@3                                        0.574476
+
+=================== Recommended items for user A150XV12S9HAZ ===================
+
+   0) GR(<item B00002STEZ>)                         0.699961
+   1) GR(<item B00005NUIZ>)                         0.698707
+   2) GR(<item B00004U5VN>)                         0.697738
+   3) GR(<item B00000J9J9>)                         0.697624
+   4) GR(<item B00000JNHJ>)                         0.697618
+   5) GR(<item B00005NN5G>)                         0.697224
+   6) GR(<item B0000488VP>)                         0.696100
+   7) GR(<item B00004SWLT>)                         0.695119
+   8) GR(<item B00004U5VF>)                         0.694924
+   9) GR(<item B00000INR2>)                         0.693108
+
+      NDCG@10                                       0.618024
+
+=================== Recommended items for user A150XV12S9HAZ ===================
+
+   0) GR(<item B00002STEZ>)                         0.699961
+   1) GR(<item B00005NUIZ>)                         0.698707
+   2) GR(<item B00004U5VN>)                         0.697738
+   3) GR(<item B00000J9J9>)                         0.697624
+   4) GR(<item B00000JNHJ>)                         0.697618
+
+      NDCG@5                                        0.618024
+
+=================== Recommended items for user A150XV12S9HAZ ===================
+
+   0) GR(<item B00002STEZ>)                         0.699961
+   1) GR(<item B00005NUIZ>)                         0.698707
+   2) GR(<item B00004U5VN>)                         0.697738
+
+      NDCG@3                                        0.618024
+
+================== Recommended items for user A151OW029XD9JU ===================
+
+   0) GR(<item 0061134007>)                         0.899528
+   1) GR(<item 0060759836>)                         0.899118
+   2) GR(<item 0061689246>)                         0.894578
+   3) GR(<item 0061140325>)                         0.875530
+   4) GR(<item 0062236679>)                         0.875080
+   5) GR(<item 0062198890>)                         0.858768
+   6) GR(<item 0062218832>)                         0.858510
+   7) GR(<item 0099458322>)                         0.857834
+   8) GR(<item 0062257838>)                         0.857726
+   9) GR(<item 0061628018>)                         0.855048
+
+      NDCG@10                                       0.750047
+
+================== Recommended items for user A151OW029XD9JU ===================
+
+   0) GR(<item 0061134007>)                         0.899528
+   1) GR(<item 0060759836>)                         0.899118
+   2) GR(<item 0061689246>)                         0.894578
+   3) GR(<item 0061140325>)                         0.875530
+   4) GR(<item 0062236679>)                         0.875080
+
+      NDCG@5                                        0.750047
+
+================== Recommended items for user A151OW029XD9JU ===================
+
+   0) GR(<item 0061134007>)                         0.899528
+   1) GR(<item 0060759836>)                         0.899118
+   2) GR(<item 0061689246>)                         0.894578
+
+      NDCG@3                                        0.750047
+
+================== Recommended items for user A1517476XFOC7A ===================
+
+   0) GR(<item 013149418X>)                         0.698748
+   1) GR(<item 0061766089>)                         0.698721
+   2) GR(<item 0132733102>)                         0.698603
+   3) GR(<item 0062127713>)                         0.698602
+   4) GR(<item 0061939234>)                         0.696104
+   5) GR(<item 0060513608>)                         0.692617
+   6) GR(<item 0060392886>)                         0.692600
+   7) GR(<item 0062021877>)                         0.690723
+   8) GR(<item B00004UE0O>)                         0.690272
+   9) GR(<item B00005RD71>)                         0.687098
+
+      NDCG@10                                       0.714720
+
+================== Recommended items for user A1517476XFOC7A ===================
+
+   0) GR(<item 013149418X>)                         0.698748
+   1) GR(<item 0061766089>)                         0.698721
+   2) GR(<item 0132733102>)                         0.698603
+   3) GR(<item 0062127713>)                         0.698602
+   4) GR(<item 0061939234>)                         0.696104
+
+      NDCG@5                                        0.714720
+
+================== Recommended items for user A1517476XFOC7A ===================
+
+   0) GR(<item 013149418X>)                         0.698748
+   1) GR(<item 0061766089>)                         0.698721
+   2) GR(<item 0132733102>)                         0.698603
+
+      NDCG@3                                        0.714720
+
+================== Recommended items for user A15LG7HS4WKKKS ===================
+
+   0) GR(<item B002BSA388>)                         0.980539
+   1) GR(<item B004T7IRS2>)                         0.969818
+   2) GR(<item B003O680RM>)                         0.969172
+   3) GR(<item B002TLTBN0>)                         0.968767
+   4) GR(<item B000ZK9QD2>)                         0.957077
+   5) GR(<item B00000DMAT>)                         0.955710
+   6) GR(<item B001UU1WN8>)                         0.955230
+   7) GR(<item B000R0PLK2>)                         0.944440
+   8) GR(<item B001REZLY8>)                         0.944068
+   9) GR(<item B000UU5T7E>)                         0.941259
+
+      NDCG@10                                       0.806196
+
+================== Recommended items for user A15LG7HS4WKKKS ===================
+
+   0) GR(<item B002BSA388>)                         0.980539
+   1) GR(<item B004T7IRS2>)                         0.969818
+   2) GR(<item B003O680RM>)                         0.969172
+   3) GR(<item B002TLTBN0>)                         0.968767
+   4) GR(<item B000ZK9QD2>)                         0.957077
+
+      NDCG@5                                        0.806196
+
+================== Recommended items for user A15LG7HS4WKKKS ===================
+
+   0) GR(<item B002BSA388>)                         0.980539
+   1) GR(<item B004T7IRS2>)                         0.969818
+   2) GR(<item B003O680RM>)                         0.969172
+
+      NDCG@3                                        0.806196
+
+=================== Recommended items for user A15JPYV0L19RF ===================
+
+   0) GR(<item B000FPOJOS>)                         0.887294
+   1) GR(<item B000UC5ML0>)                         0.881970
+   2) GR(<item B001YHX4B0>)                         0.880117
+   3) GR(<item B002I0JA7E>)                         0.880026
+   4) GR(<item B000H96C9M>)                         0.879996
+   5) GR(<item B0047SIUZI>)                         0.879982
+   6) GR(<item B000MIXFWA>)                         0.879969
+   7) GR(<item B003O680RM>)                         0.878552
+   8) GR(<item B000TVT8PI>)                         0.875653
+   9) GR(<item B0010AYJXI>)                         0.874333
+
+      NDCG@10                                       0.930873
+
+=================== Recommended items for user A15JPYV0L19RF ===================
+
+   0) GR(<item B000FPOJOS>)                         0.887294
+   1) GR(<item B000UC5ML0>)                         0.881970
+   2) GR(<item B001YHX4B0>)                         0.880117
+   3) GR(<item B002I0JA7E>)                         0.880026
+   4) GR(<item B000H96C9M>)                         0.879996
+
+      NDCG@5                                        0.930873
+
+=================== Recommended items for user A15JPYV0L19RF ===================
+
+   0) GR(<item B000FPOJOS>)                         0.887294
+   1) GR(<item B000UC5ML0>)                         0.881970
+   2) GR(<item B001YHX4B0>)                         0.880117
+
+      NDCG@3                                        0.930873
+
+================== Recommended items for user A15U64VGUV6RBF ===================
+
+   0) GR(<item B000JLIXIG>)                         0.813727
+   1) GR(<item B004P7VGF2>)                         0.789179
+   2) GR(<item B002I0J51U>)                         0.781342
+   3) GR(<item B0016C3260>)                         0.776068
+   4) GR(<item B000UC5ML0>)                         0.766836
+   5) GR(<item B000ZK7ZOE>)                         0.751409
+   6) GR(<item B002NN7AKU>)                         0.746365
+   7) GR(<item B00006JZQZ>)                         0.740899
+   8) GR(<item B000TG530M>)                         0.740886
+   9) GR(<item B00002STXN>)                         0.740710
+
+      NDCG@10                                       0.633223
+
+================== Recommended items for user A15U64VGUV6RBF ===================
+
+   0) GR(<item B000JLIXIG>)                         0.813727
+   1) GR(<item B004P7VGF2>)                         0.789179
+   2) GR(<item B002I0J51U>)                         0.781342
+   3) GR(<item B0016C3260>)                         0.776068
+   4) GR(<item B000UC5ML0>)                         0.766836
+
+      NDCG@5                                        0.633223
+
+================== Recommended items for user A15U64VGUV6RBF ===================
+
+   0) GR(<item B000JLIXIG>)                         0.813727
+   1) GR(<item B004P7VGF2>)                         0.789179
+   2) GR(<item B002I0J51U>)                         0.781342
+
+      NDCG@3                                        0.633223
+
+================== Recommended items for user A15Q7ABIU9O9YZ ===================
+
+   0) GR(<item 0060584750>)                         0.787710
+   1) GR(<item 0062072188>)                         0.778188
+   2) GR(<item 0006551807>)                         0.732553
+   3) GR(<item 0060518499>)                         0.725824
+   4) GR(<item 0061706876>)                         0.709927
+   5) GR(<item 0060534044>)                         0.700638
+   6) GR(<item 0061998850>)                         0.696352
+   7) GR(<item 0007167040>)                         0.681079
+   8) GR(<item 0061374199>)                         0.680558
+   9) GR(<item 0091800951>)                         0.670089
+
+      NDCG@10                                       0.633302
+
+================== Recommended items for user A15Q7ABIU9O9YZ ===================
+
+   0) GR(<item 0060584750>)                         0.787710
+   1) GR(<item 0062072188>)                         0.778188
+   2) GR(<item 0006551807>)                         0.732553
+   3) GR(<item 0060518499>)                         0.725824
+   4) GR(<item 0061706876>)                         0.709927
+
+      NDCG@5                                        0.658921
+
+================== Recommended items for user A15Q7ABIU9O9YZ ===================
+
+   0) GR(<item 0060584750>)                         0.787710
+   1) GR(<item 0062072188>)                         0.778188
+   2) GR(<item 0006551807>)                         0.732553
+
+      NDCG@3                                        0.726079
+
+================== Recommended items for user A15XY6GGKD3B6D ===================
+
+   0) GR(<item 0060878061>)                         0.757271
+   1) GR(<item 0060838728>)                         0.752803
+   2) GR(<item 0099429799>)                         0.745650
+   3) GR(<item 006092988X>)                         0.745153
+   4) GR(<item 0061438596>)                         0.717690
+   5) GR(<item 0062198890>)                         0.714765
+   6) GR(<item 0007410956>)                         0.713618
+   7) GR(<item 0062217208>)                         0.713543
+   8) GR(<item 0062049801>)                         0.713276
+   9) GR(<item 0061703257>)                         0.712903
+
+      NDCG@10                                       0.472083
+
+================== Recommended items for user A15XY6GGKD3B6D ===================
+
+   0) GR(<item 0060878061>)                         0.757271
+   1) GR(<item 0060838728>)                         0.752803
+   2) GR(<item 0099429799>)                         0.745650
+   3) GR(<item 006092988X>)                         0.745153
+   4) GR(<item 0061438596>)                         0.717690
+
+      NDCG@5                                        0.472083
+
+================== Recommended items for user A15XY6GGKD3B6D ===================
+
+   0) GR(<item 0060878061>)                         0.757271
+   1) GR(<item 0060838728>)                         0.752803
+   2) GR(<item 0099429799>)                         0.745650
+
+      NDCG@3                                        0.472083
+
+================== Recommended items for user A160AB64G2E949 ===================
+
+   0) GR(<item B0002HTAYS>)                         0.873613
+   1) GR(<item B00029QR8I>)                         0.873572
+   2) GR(<item 0062073508>)                         0.873366
+   3) GR(<item B000TT4GBG>)                         0.873202
+   4) GR(<item B00005N7YR>)                         0.870993
+   5) GR(<item B000GE7O9K>)                         0.870728
+   6) GR(<item B00006JZQZ>)                         0.870617
+   7) GR(<item B0002MPT6Q>)                         0.868339
+   8) GR(<item B00003OPES>)                         0.847036
+   9) GR(<item B00004YC3U>)                         0.846954
+
+      NDCG@10                                       0.754982
+
+================== Recommended items for user A160AB64G2E949 ===================
+
+   0) GR(<item B0002HTAYS>)                         0.873613
+   1) GR(<item B00029QR8I>)                         0.873572
+   2) GR(<item 0062073508>)                         0.873366
+   3) GR(<item B000TT4GBG>)                         0.873202
+   4) GR(<item B00005N7YR>)                         0.870993
+
+      NDCG@5                                        0.767319
+
+================== Recommended items for user A160AB64G2E949 ===================
+
+   0) GR(<item B0002HTAYS>)                         0.873613
+   1) GR(<item B00029QR8I>)                         0.873572
+   2) GR(<item 0062073508>)                         0.873366
+
+      NDCG@3                                        0.732179
+
+================================= Mean NDCG@K ==================================
+
+      NDCG@3                                         0.610429
+      NDCG@5                                         0.611182
+      NDCG@10                                        0.609029
+
+	Command being timed: "./grank.py dataset/M1000_T30.json --stop-after 50 --output results/grank__M1000_T30.yaml --top-k 3 --top-k 5 --top-k 10 --max-iter 20 --threshold 1e-4 --only-new --parallel 8"
+	User time (seconds): 2072719.78
+	System time (seconds): 494.19
+	Percent of CPU this job got: 236%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 244:00:39
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1200460
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 2123372
+	Minor (reclaiming a frame) page faults: 6508950
+	Voluntary context switches: 547117
+	Involuntary context switches: 174324834
+	Swaps: 0
+	File system inputs: 28593896
+	File system outputs: 6024
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

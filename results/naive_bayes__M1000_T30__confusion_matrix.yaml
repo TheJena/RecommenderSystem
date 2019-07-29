@@ -1,0 +1,6 @@
+args.input: dataset/M1000_T30.json
+confusion_matrix:
+- - 79.0
+  - 21.0
+- - 36.0
+  - 14.0
