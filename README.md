@@ -14,6 +14,8 @@ The project is composed of several scripts to:
 * apply a content-based approach to the data
 * merge the recommendations of the two approaches into a single list
   of item to recommend
+* plot a performance comparison between the graph-based and the
+  content-based approach
 
 How to create MongoDB dump
 =========================
