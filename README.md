@@ -6,6 +6,8 @@ Its major purpose is the "Gestione Avanzata dell'Informazione 2" exam
 ("Advanced Information Management 2" is a course about data analytics,
 big data, NoSQL models, text analytics and graph analytics).
 
+Start by having a look at the [presentation](https://github.com/TheJena/RecommenderSystem/raw/master/presentation.pdf).
+
 The project is composed of several scripts to:
 
 * inspect the available data in a MongoDB
